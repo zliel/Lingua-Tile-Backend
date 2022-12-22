@@ -19,7 +19,7 @@ async def get_all_lessons():
     return [Lesson(**lesson) for lesson in lessons]
 
 
-@router.get("/create/{name}")
+@router.post("/create/{name}")
 async def create_lesson(name):
     """Create a new lesson in the database"""
     new_lesson = Lesson(name)

@@ -1,5 +1,3 @@
-import json
-
 import dotenv
 
 from models import Card
@@ -22,7 +20,7 @@ async def get_all_cards():
     return [Card(**card) for card in cards]
 
 
-@router.get("/create/{front_text}/{back_text}/{lesson_id}")
+@router.post("/create/{front_text}/{back_text}/{lesson_id}")
 async def create_card(front_text, back_text, lesson_id):
     """Create a new card in the database"""
     new_card = Card(front_text, back_text, lesson_id)
@@ -56,7 +54,7 @@ async def update_card(card_id, updated_card_info: dict):
     """Update a card in the database by id"""
     updated_card = card_collection.find_one_and_update({"_id": card_id}, {"$set": updated_card_info})
 
-    # if the lesson id was changed, update the lesson to reflect the new card
+    # If the lesson id was changed, update the lesson to reflect the new card
     if "lesson_id" in updated_card_info:
         lesson_collection.find_one_and_update({"_id": updated_card_info["lesson_id"]}, {"$addToSet": {"cards": updated_card}})
         lesson_collection.find_one_and_update({"_id": updated_card["lesson_id"]}, {"$pull": {"cards": updated_card}})
