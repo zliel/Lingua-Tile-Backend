@@ -12,7 +12,7 @@ db = client['lingua-tile']
 card_collection = db['cards']
 
 
-@router.get("/")
+@router.get("/all")
 async def get_all_cards():
     """Retrieve all cards from the database"""
     cards = card_collection.find()
@@ -32,3 +32,10 @@ async def get_card(card_id):
     """Retrieve a card from the database by id"""
     card = card_collection.find_one({"_id": card_id})
     return card
+
+
+@router.delete("/delete/{card_id}")
+async def delete_card(card_id):
+    """Delete a card from the database by id"""
+    card_collection.delete_one({"_id": card_id})
+    return {"message": "Card deleted"}
