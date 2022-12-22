@@ -1,3 +1,5 @@
+import json
+
 import dotenv
 
 from models import Card
@@ -39,3 +41,12 @@ async def delete_card(card_id):
     """Delete a card from the database by id"""
     card_collection.delete_one({"_id": card_id})
     return {"message": "Card deleted"}
+
+
+@router.put("/update/{card_id}")
+async def update_card(card_id, updated_card_info: dict):
+    """Update a card in the database by id"""
+    updated_card = card_collection.find_one_and_update({"_id": card_id}, {"$set": updated_card_info})
+    if updated_card is None:
+        return {"message": "Card not found"}
+    return updated_card
