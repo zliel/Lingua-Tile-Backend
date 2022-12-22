@@ -3,9 +3,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 from api.cards import router as cards_router
+from api.lessons import router as lessons_router
 
 app = FastAPI()
 app.include_router(cards_router)
+app.include_router(lessons_router)
 origins = ["http://localhost:3000"]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"])
 
