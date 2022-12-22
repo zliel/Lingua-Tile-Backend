@@ -38,6 +38,13 @@ async def get_card(card_id):
     return card
 
 
+@router.get("/lesson/{lesson_id}")
+async def get_cards_by_lesson(lesson_id):
+    """Retrieve all cards associated with a lesson from the database by lesson id"""
+    cards = card_collection.find({"lesson_id": lesson_id})
+    return [Card(**card) for card in cards]
+
+
 @router.delete("/delete/{card_id}")
 async def delete_card(card_id):
     """Delete a card from the database by id"""
