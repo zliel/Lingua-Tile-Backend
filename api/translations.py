@@ -2,7 +2,7 @@ import dotenv
 from fastapi import APIRouter
 import requests
 
-router = APIRouter(prefix="/api/translations", tags=["translations"])
+router = APIRouter(prefix="/api/translations", tags=["Translations"])
 host = "deep-translate1.p.rapidapi.com"
 api_key = dotenv.get_key(".env", "API_KEY")
 headers = {
@@ -18,7 +18,7 @@ payload = {
 }
 
 
-@router.get("/{src_text}/{src_lang}/{target_lang}")
+@router.get("/{src_text}/{src_lang}/{target_lang}", tags=["Translations"])
 async def translate(src_text, src_lang, target_lang):
     """Translate text from one language to another"""
     url = f"https://{host}/language/translate/v2"
@@ -38,7 +38,7 @@ async def translate(src_text, src_lang, target_lang):
     return translation_response
 
 
-@router.get("/languages")
+@router.get("/languages", tags=["Translations"])
 async def get_languages():
     # url = f"https://{host}/language/translate/v2/languages"
     # response = requests.request("GET", url, headers=headers)

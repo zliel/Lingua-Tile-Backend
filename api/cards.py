@@ -5,7 +5,7 @@ from models import Card
 from fastapi import APIRouter
 from pymongo import MongoClient
 
-router = APIRouter(prefix="/api/cards", tags=["cards"])
+router = APIRouter(prefix="/api/cards", tags=["Cards"])
 mongo_host = dotenv.get_key(".env", "MONGO_HOST")
 client = MongoClient(mongo_host)
 db = client['lingua-tile']
@@ -45,17 +45,6 @@ async def get_cards_by_lesson(lesson_id):
     return [Card(**card) for card in cards]
 
 
-@router.delete("/delete/{card_id}")
-async def delete_card(card_id):
-    """Delete a card from the database by id"""
-    card_collection.delete_one({"_id": card_id})
-
-    # Delete the card from its corresponding lesson
-    lesson_collection.update_many({}, {"$pull": {"cards": {"_id": card_id}}})
-
-    return {"message": "Card deleted"}
-
-
 @router.put("/update/{card_id}")
 async def update_card(card_id, updated_card_info: dict):
     """Update a card in the database by id"""
@@ -68,3 +57,14 @@ async def update_card(card_id, updated_card_info: dict):
     if updated_card is None:
         return {"message": "Card not found"}
     return updated_card
+
+
+@router.delete("/delete/{card_id}")
+async def delete_card(card_id):
+    """Delete a card from the database by id"""
+    card_collection.delete_one({"_id": card_id})
+
+    # Delete the card from its corresponding lesson
+    lesson_collection.update_many({}, {"$pull": {"cards": {"_id": card_id}}})
+
+    return {"message": "Card deleted"}
