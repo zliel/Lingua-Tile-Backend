@@ -51,9 +51,16 @@ async def update_card(card_id, updated_card_info: dict):
     updated_card = card_collection.find_one_and_update({"_id": card_id}, {"$set": updated_card_info})
 
     # If the lesson id was changed, update the lesson to reflect the new card
-    if "lesson_id" in updated_card_info:
-        lesson_collection.find_one_and_update({"_id": updated_card_info["lesson_id"]}, {"$addToSet": {"cards": updated_card}})
-        lesson_collection.find_one_and_update({"_id": updated_card["lesson_id"]}, {"$pull": {"cards": updated_card}})
+    if "lesson_id" in card_info_to_update:
+        lesson_collection.find_one_and_update({"_id": card_info_to_update["lesson_id"]},
+                                              {"$addToSet": {"cards": updated_card}})
+
+        lesson_collection.find_one_and_update({"_id": old_card["lesson_id"]},
+                                              {"$pull": {"cards": updated_card}})
+
+    # TODO: Consider changing the Lesson model to have a list of card ids instead of a list of cards, so that we
+    #  don't have to update the lesson every time a card is updated . If so, change the old_card query to return the document
+    # TODO: Also check if the Optional[str] = None is necessary for the update_card model
     if updated_card is None:
         return {"message": "Card not found"}
     return updated_card
