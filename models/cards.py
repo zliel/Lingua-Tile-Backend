@@ -1,9 +1,23 @@
 from bson.objectid import ObjectId
+from pydantic import BaseModel, Field
+
+from models.PyObjectId import PyObjectId
 
 
-class Card:
-    def __init__(self, front_text: str, back_text: str, lesson_id: str, _id: str = None):
-        self.front_text = front_text
-        self.back_text = back_text
-        self.lesson_id = lesson_id
-        self._id = _id if _id else str(ObjectId())
+class Card(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    front_text: str = Field(...)
+    back_text: str = Field(...)
+    lesson_id: str = Field(...)
+
+    class Config:
+        arbitrary_types_allowed = True
+        allow_population_by_field_name = True
+        json_encoders = {ObjectId: lambda oid: str(oid)}
+        schema_extra = {
+            "example": {
+                "front_text": "Hello",
+                "back_text": "こんにちは",
+                "lesson_id": "5f9f1b9b9c9d1c0b8c8b9c9d"
+            }
+        }
