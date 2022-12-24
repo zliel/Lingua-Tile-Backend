@@ -1,8 +1,10 @@
 import dotenv
+from fastapi.encoders import jsonable_encoder
 
 from pymongo import MongoClient
 from fastapi import APIRouter
 from models.lessons import Lesson
+from models.update_lesson import UpdateLesson
 
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
 mongo_host = dotenv.get_key(".env", "MONGO_HOST")
@@ -19,32 +21,51 @@ async def get_all_lessons():
     return [Lesson(**lesson) for lesson in lessons]
 
 
-@router.post("/create/{name}", tags=["Lessons"])
-async def create_lesson(name):
+@router.post("/create", tags=["Lessons"])
+async def create_lesson(lesson: Lesson):
     """Create a new lesson in the database"""
-    new_lesson = Lesson(name)
-    lesson_collection.insert_one(new_lesson.__dict__)
-    return new_lesson
+    new_lesson = jsonable_encoder(lesson)
+
+    lesson_collection.insert_one(new_lesson)
+
+    # Update the cards that are in the lesson
+    if new_lesson["cards"]:
+        for card_id in new_lesson["cards"]:
+            card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_id": new_lesson["_id"]}})
+    return lesson
 
 
 @router.get("/{lesson_id}", tags=["Lessons"])
 async def get_lesson(lesson_id):
     """Retrieve a lesson from the database by id"""
     lesson = lesson_collection.find_one({"_id": lesson_id})
-    return lesson
+    return Lesson(**lesson)
 
 
 @router.put("/update/{lesson_id}", tags=["Lessons"])
-async def update_lesson(lesson_id, updated_lesson_info: dict):
+async def update_lesson(lesson_id, updated_info: UpdateLesson):
     """Update a lesson in the database by id"""
-    updated_lesson = lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": updated_lesson_info})
+    lesson_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
-    # Update all cards associated with the lesson to reflect the new lesson id if it was changed
-    if "_id" in updated_lesson_info:
-        card_collection.update_many({"lesson_id": lesson_id}, {"$set": {"lesson_id": updated_lesson_info["_id"]}})
-    if updated_lesson is None:
-        return {"message": "Lesson not found"}
-    return updated_lesson
+    # update a lesson in the database by id and return the old lesson to help with updating the cards
+    old_lesson = lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": lesson_info_to_update})
+
+    # update a lesson in the database by id
+    updated_lesson = lesson_collection.find_one({"_id": lesson_id})
+
+    # if a card was in the old lesson but not the new lesson, remove the lesson id from the card
+    if old_lesson["cards"]:
+        for card_id in old_lesson["cards"]:
+            if card_id not in updated_lesson["cards"]:
+                card_collection.find_one_and_update({"_id": card_id}, {"$pull": {"lesson_id": lesson_id}})
+
+    # If the lesson contains cards, update the cards to reflect the new lesson
+    if updated_lesson["cards"]:
+        for card_id in updated_lesson["cards"]:
+            # add the lesson id to the list of lessons the card is associated with
+            card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_id": lesson_id}})
+
+    return Lesson(**updated_lesson)
 
 
 @router.delete("/delete/{lesson_id}", tags=["Lessons"])
@@ -52,7 +73,7 @@ async def delete_lesson(lesson_id):
     """Delete a lesson from the database by id"""
     lesson_collection.delete_one({"_id": lesson_id})
 
-    # Delete all cards associated with the lesson
-    card_collection.delete_many({"lesson_id": lesson_id})
+    # update all cards associated with the lesson to reflect the deletion of the lesson
+    card_collection.update_many({"lesson_id": lesson_id}, {"$pull": {"lesson_id": lesson_id}})
 
     return {"message": "Lesson deleted"}
