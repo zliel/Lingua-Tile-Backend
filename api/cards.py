@@ -67,7 +67,7 @@ async def update_card(card_id, updated_info: UpdateCard):
         return {"error": "Card not found"}
 
     # If the card_info_to_update contains lesson IDs, we need to add the card to the lessons
-    if card_info_to_update["lesson_id"]:
+    if card_info_to_update.__contains__("lesson_id"):
         for lesson_id in card_info_to_update["lesson_id"]:
             lesson_collection.find_one_and_update({"_id": lesson_id}, {"$addToSet": {"cards": card_id}})
 
