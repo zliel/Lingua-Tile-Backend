@@ -1,6 +1,7 @@
 import dotenv
+from fastapi.encoders import jsonable_encoder
 
-from models import Card
+from models import Card, UpdateCard
 
 from fastapi import APIRouter
 from pymongo import MongoClient
@@ -20,15 +21,21 @@ async def get_all_cards():
     return [Card(**card) for card in cards]
 
 
-@router.post("/create/{front_text}/{back_text}/{lesson_id}")
-async def create_card(front_text, back_text, lesson_id):
+@router.post("/create")
+async def create_card(card: Card):
     """Create a new card in the database"""
-    new_card = Card(front_text, back_text, lesson_id)
-    card_collection.insert_one(new_card.__dict__)
 
-    # Add the card to its corresponding lesson
-    lesson_collection.find_one_and_update({"_id": lesson_id}, {"$addToSet": {"cards": new_card.__dict__}})
-    return new_card
+    # If we don't encode the card, we run into a problem where the card id is not a string
+    new_card = jsonable_encoder(card)
+
+    card_collection.insert_one(new_card)
+
+    # Update the lessons that the card is in
+    if new_card["lesson_id"]:
+        for lesson_id in new_card["lesson_id"]:
+            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$addToSet": {"cards": new_card["_id"]}})
+
+    return card
 
 
 @router.get("/{card_id}")
@@ -46,16 +53,30 @@ async def get_cards_by_lesson(lesson_id):
 
 
 @router.put("/update/{card_id}")
-async def update_card(card_id, updated_card_info: dict):
+async def update_card(card_id, updated_info: UpdateCard):
     """Update a card in the database by id"""
-    updated_card = card_collection.find_one_and_update({"_id": card_id}, {"$set": updated_card_info})
+    card_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
-    # If the lesson id was changed, update the lesson to reflect the new card
-    if "lesson_id" in updated_card_info:
-        lesson_collection.find_one_and_update({"_id": updated_card_info["lesson_id"]}, {"$addToSet": {"cards": updated_card}})
-        lesson_collection.find_one_and_update({"_id": updated_card["lesson_id"]}, {"$pull": {"cards": updated_card}})
+    # update a card in the database by id
+    old_card = card_collection.find_one_and_update({"_id": card_id}, {"$set": card_info_to_update})
+    if old_card is None:
+        return {"error": "Card not found"}
+
+    updated_card = card_collection.find_one({"_id": card_id})
     if updated_card is None:
-        return {"message": "Card not found"}
+        return {"error": "Card not found"}
+
+    # If the card_info_to_update contains lesson IDs, we need to add the card to the lessons
+    if card_info_to_update.__contains__("lesson_id"):
+        for lesson_id in card_info_to_update["lesson_id"]:
+            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$addToSet": {"cards": card_id}})
+
+    # If the card was in a lesson before, but not after updating, remove it from that lesson
+    if old_card["lesson_id"]:
+        for lesson_id in old_card["lesson_id"]:
+            if lesson_id not in card_info_to_update["lesson_id"]:
+                lesson_collection.find_one_and_update({"_id": lesson_id}, {"$pull": {"cards": card_id}})
+
     return updated_card
 
 
@@ -64,7 +85,7 @@ async def delete_card(card_id):
     """Delete a card from the database by id"""
     card_collection.delete_one({"_id": card_id})
 
-    # Delete the card from its corresponding lesson
-    lesson_collection.update_many({}, {"$pull": {"cards": {"_id": card_id}}})
+    # Delete the card from all lessons that it is in
+    lesson_collection.update_many({}, {"$pull": {"cards": card_id}})
 
-    return {"message": "Card deleted"}
+    return {"message": "Card deleted successfully"}
