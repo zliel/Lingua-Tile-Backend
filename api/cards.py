@@ -59,8 +59,12 @@ async def update_card(card_id, updated_info: UpdateCard):
 
     # update a card in the database by id
     old_card = card_collection.find_one_and_update({"_id": card_id}, {"$set": card_info_to_update})
+    if old_card is None:
+        return {"error": "Card not found"}
 
     updated_card = card_collection.find_one({"_id": card_id})
+    if updated_card is None:
+        return {"error": "Card not found"}
 
     # If the card_info_to_update contains lesson IDs, we need to add the card to the lessons
     if card_info_to_update["lesson_id"]:
@@ -73,8 +77,6 @@ async def update_card(card_id, updated_info: UpdateCard):
             if lesson_id not in card_info_to_update["lesson_id"]:
                 lesson_collection.find_one_and_update({"_id": lesson_id}, {"$pull": {"cards": card_id}})
 
-    if updated_card is None:
-        return {"message": "Card not found"}
     return updated_card
 
 
