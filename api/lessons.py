@@ -56,13 +56,13 @@ async def update_lesson(lesson_id, updated_info: UpdateLesson):
     updated_lesson = lesson_collection.find_one({"_id": lesson_id})
 
     # if a card was in the old lesson but not the new lesson, remove the lesson id from the card
-    if old_lesson and old_lesson["cards"]:
+    if old_lesson["cards"]:
         for card_id in old_lesson["cards"]:
             if card_id not in updated_lesson["cards"]:
                 card_collection.find_one_and_update({"_id": card_id}, {"$pull": {"lesson_id": lesson_id}})
 
     # If the lesson contains cards, update the cards to reflect the new lesson
-    if updated_lesson["cards"] is not None:
+    if updated_lesson["cards"]:
         for card_id in updated_lesson["cards"]:
             # add the lesson id to the list of lessons the card is associated with
             card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_id": lesson_id}})
