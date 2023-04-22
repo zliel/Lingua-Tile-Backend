@@ -3,7 +3,7 @@ from fastapi.encoders import jsonable_encoder
 
 from models import Card, UpdateCard
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status, HTTPException
 from pymongo import MongoClient
 
 router = APIRouter(prefix="/api/cards", tags=["Cards"])
@@ -21,7 +21,7 @@ async def get_all_cards():
     return [Card(**card) for card in cards]
 
 
-@router.post("/create")
+@router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_card(card: Card):
     """Create a new card in the database"""
 
@@ -60,11 +60,11 @@ async def update_card(card_id, updated_info: UpdateCard):
     # update a card in the database by id
     old_card = card_collection.find_one_and_update({"_id": card_id}, {"$set": card_info_to_update})
     if old_card is None:
-        return {"error": "Card not found"}
+        raise HTTPException(status_code=404, detail=f"Card with id {card_id} was not found")
 
     updated_card = card_collection.find_one({"_id": card_id})
     if updated_card is None:
-        return {"error": "Card not found"}
+        raise HTTPException(status_code=404, detail=f"Card with id {card_id} was not found after update")
 
     # If the card_info_to_update contains lesson IDs, we need to add the card to the lessons
     if card_info_to_update.__contains__("lesson_id"):
@@ -80,12 +80,10 @@ async def update_card(card_id, updated_info: UpdateCard):
     return updated_card
 
 
-@router.delete("/delete/{card_id}")
+@router.delete("/delete/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_card(card_id):
     """Delete a card from the database by id"""
     card_collection.delete_one({"_id": card_id})
 
     # Delete the card from all lessons that it is in
     lesson_collection.update_many({}, {"$pull": {"cards": card_id}})
-
-    return {"message": "Card deleted successfully"}
