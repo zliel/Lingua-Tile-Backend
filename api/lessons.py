@@ -21,7 +21,7 @@ async def get_all_lessons():
     return [Lesson(**lesson) for lesson in lessons]
 
 
-@router.post("/create", status_code=status.HTTP_201, tags=["Lessons"])
+@router.post("/create", status_code=status.HTTP_201_CREATED, tags=["Lessons"])
 async def create_lesson(lesson: Lesson):
     """Create a new lesson in the database"""
     new_lesson = jsonable_encoder(lesson)
