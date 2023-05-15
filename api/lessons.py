@@ -14,14 +14,14 @@ lesson_collection = db['lessons']
 card_collection = db['cards']
 
 
-@router.get("/all", tags=["Lessons"])
+@router.get("/all")
 async def get_all_lessons():
     """Retrieve all lessons from the database"""
     lessons = lesson_collection.find()
     return [Lesson(**lesson) for lesson in lessons]
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED, tags=["Lessons"])
+@router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_lesson(lesson: Lesson):
     """Create a new lesson in the database"""
     new_lesson = jsonable_encoder(lesson)
@@ -35,14 +35,14 @@ async def create_lesson(lesson: Lesson):
     return lesson
 
 
-@router.get("/{lesson_id}", tags=["Lessons"])
+@router.get("/{lesson_id}")
 async def get_lesson(lesson_id: str):
     """Retrieve a lesson from the database by id"""
     lesson = lesson_collection.find_one({"_id": lesson_id})
     return Lesson(**lesson)
 
 
-@router.put("/update/{lesson_id}", tags=["Lessons"])
+@router.put("/update/{lesson_id}")
 async def update_lesson(lesson_id, updated_info: UpdateLesson):
     """Update a lesson in the database by id"""
     lesson_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
@@ -70,7 +70,7 @@ async def update_lesson(lesson_id, updated_info: UpdateLesson):
     return Lesson(**updated_lesson)
 
 
-@router.delete("/delete/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Lessons"])
+@router.delete("/delete/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_lesson(lesson_id):
     """Delete a lesson from the database by id"""
     lesson_collection.delete_one({"_id": lesson_id})
