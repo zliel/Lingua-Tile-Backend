@@ -19,7 +19,7 @@ payload = {
 
 
 @router.get("/{src_text}/{src_lang}/{target_lang}", tags=["Translations"])
-async def translate(src_text, src_lang, target_lang):
+async def translate(src_text: str, src_lang: str, target_lang: str) -> dict:
     """Translate text from one language to another"""
     url = f"https://{host}/language/translate/v2"
     querystring = {"q": src_text, "target": target_lang, "source": "en"}
@@ -39,7 +39,7 @@ async def translate(src_text, src_lang, target_lang):
 
 
 @router.get("/languages", tags=["Translations"])
-async def get_languages():
+async def get_languages() -> list:
     # url = f"https://{host}/language/translate/v2/languages"
     # response = requests.request("GET", url, headers=headers)
     # filter the response to only return english and japanese
