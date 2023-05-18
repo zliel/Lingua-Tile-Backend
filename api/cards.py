@@ -1,7 +1,8 @@
+import bson
 import dotenv
 from fastapi.encoders import jsonable_encoder
 
-from models import Card, UpdateCard
+from models import Card, UpdateCard, PyObjectId
 
 from fastapi import APIRouter, status, HTTPException
 from pymongo import MongoClient
@@ -39,21 +40,21 @@ async def create_card(card: Card):
 
 
 @router.get("/{card_id}")
-async def get_card(card_id):
+async def get_card(card_id: PyObjectId):
     """Retrieve a card from the database by id"""
     card = card_collection.find_one({"_id": card_id})
     return card
 
 
 @router.get("/lesson/{lesson_id}")
-async def get_cards_by_lesson(lesson_id):
+async def get_cards_by_lesson(lesson_id: PyObjectId):
     """Retrieve all cards associated with a lesson from the database by lesson id"""
     cards = card_collection.find({"lesson_id": lesson_id})
     return [Card(**card) for card in cards]
 
 
 @router.put("/update/{card_id}")
-async def update_card(card_id, updated_info: UpdateCard):
+async def update_card(card_id: PyObjectId, updated_info: UpdateCard):
     """Update a card in the database by id"""
     card_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
@@ -81,7 +82,7 @@ async def update_card(card_id, updated_info: UpdateCard):
 
 
 @router.delete("/delete/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_card(card_id):
+async def delete_card(card_id: PyObjectId):
     """Delete a card from the database by id"""
     card_collection.delete_one({"_id": card_id})
 

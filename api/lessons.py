@@ -3,6 +3,8 @@ from fastapi.encoders import jsonable_encoder
 
 from pymongo import MongoClient
 from fastapi import APIRouter, status, HTTPException
+
+from models import PyObjectId
 from models.lessons import Lesson
 from models.update_lesson import UpdateLesson
 
@@ -36,14 +38,14 @@ async def create_lesson(lesson: Lesson):
 
 
 @router.get("/{lesson_id}")
-async def get_lesson(lesson_id: str):
+async def get_lesson(lesson_id: PyObjectId):
     """Retrieve a lesson from the database by id"""
     lesson = lesson_collection.find_one({"_id": lesson_id})
     return Lesson(**lesson)
 
 
 @router.put("/update/{lesson_id}")
-async def update_lesson(lesson_id, updated_info: UpdateLesson):
+async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     """Update a lesson in the database by id"""
     lesson_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
@@ -71,7 +73,7 @@ async def update_lesson(lesson_id, updated_info: UpdateLesson):
 
 
 @router.delete("/delete/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_lesson(lesson_id):
+async def delete_lesson(lesson_id: PyObjectId):
     """Delete a lesson from the database by id"""
     lesson_collection.delete_one({"_id": lesson_id})
 
