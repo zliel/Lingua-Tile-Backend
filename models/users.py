@@ -10,8 +10,8 @@ class User(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     username: str = Field(...)
     password: str = Field(...)
-    roles: List[str] = Field(...)
-    completed_lessons: List[str] = Field(...)
+    roles: List[str] = Field(default=["user"])
+    completed_lessons: List[str] = Field(default=[])
 
     class Config:
         arbitrary_types_allowed = True
@@ -21,7 +21,7 @@ class User(BaseModel):
             "example": {
                 "username": "johndoe",
                 "password": "password",
-                "roles": ["student"],
+                "roles": ["user"],
                 "completed_lessons": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
             },
             "example2": {
