@@ -15,7 +15,13 @@ app.include_router(translations_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 origins = ["http://localhost:3000"]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/", tags=["Root"])
