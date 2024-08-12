@@ -1,10 +1,12 @@
 from typing import List
 
 from bson.objectid import ObjectId
+from passlib.context import CryptContext
 from pydantic import BaseModel, Field
 
 from models.py_object_id import PyObjectId
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class User(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
@@ -31,3 +33,6 @@ class User(BaseModel):
                 "completed_lessons": []
             }
         }
+
+    def hash_password(self):
+        self.password = pwd_context.hash(self.password)

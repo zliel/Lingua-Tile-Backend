@@ -16,8 +16,7 @@ user_collection = db['users']
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user: User):
     """Create a new user in the database"""
-    new_user = jsonable_encoder(user)
-
-    user_collection.insert_one(new_user)
+    user.hash_password()
+    user_collection.insert_one(user.dict(by_alias=True))
 
     return user
