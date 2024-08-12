@@ -1,4 +1,5 @@
 import dotenv
+from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
 
 from models import User
@@ -66,3 +67,15 @@ async def get_all_users():
     """Retrieve all users from the database"""
     users = user_collection.find()
     return [User(**user) for user in users]
+@router.delete("/delete/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a user from the database by id"""
+    print(f"User: {current_user}")
+    if not is_admin(current_user) and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this user")
+
+    user_id = ObjectId(user_id)
+    user = user_collection.find_one_and_delete({"_id": user_id})
+    print(f"User deleted: {user}")
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
