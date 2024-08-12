@@ -26,3 +26,9 @@ async def get_user(user_id: str):
     """Retrieve a user from the database by id"""
     user = user_collection.find_one({"_id": user_id})
     return User(**user)
+
+@router.get("/all", response_model=User, response_model_exclude={"password"})
+async def get_all_users():
+    """Retrieve all users from the database"""
+    users = user_collection.find()
+    return [User(**user) for user in users]
