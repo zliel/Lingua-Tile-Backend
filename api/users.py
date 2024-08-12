@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 import jwt
 from pymongo import MongoClient
 
-router = APIRouter(prefix="/api/users", tags=["Cards"])
+router = APIRouter(prefix="/api/users", tags=["Users"])
 mongo_host = dotenv.get_key(".env", "MONGO_HOST")
 client = MongoClient(mongo_host)
 db = client['lingua-tile']
