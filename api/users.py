@@ -50,6 +50,11 @@ async def create_user(user: User):
 
     return user
 
+@router.get("/", response_model=User, response_model_exclude={"password"})
+async def get_current_user(current_user: User = Depends(get_current_user)):
+    """Retrieve the current user"""
+    return current_user
+
 @router.get("/{user_id}", response_model=User, response_model_exclude={"password"})
 async def get_user(user_id: str):
     """Retrieve a user from the database by id"""
