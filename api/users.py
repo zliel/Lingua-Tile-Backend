@@ -20,3 +20,9 @@ async def create_user(user: User):
     user_collection.insert_one(user.dict(by_alias=True))
 
     return user
+
+@router.get("/{user_id}", response_model=User, response_model_exclude={"password"})
+async def get_user(user_id: str):
+    """Retrieve a user from the database by id"""
+    user = user_collection.find_one({"_id": user_id})
+    return User(**user)
