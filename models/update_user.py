@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 class UpdateUser(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
