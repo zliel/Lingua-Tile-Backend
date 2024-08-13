@@ -66,8 +66,11 @@ async def get_current_user(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/{user_id}", response_model=User, response_model_exclude={"password"})
-async def get_user(user_id: str):
+async def get_user(user_id: str, current_user: User = Depends(get_current_user)):
     """Retrieve a user from the database by id"""
+    if not is_admin(current_user) and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
     user = user_collection.find_one({"_id": user_id})
     return User(**user)
 
