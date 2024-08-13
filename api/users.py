@@ -60,6 +60,8 @@ async def create_user(user: User):
 @router.get("/", response_model=User, response_model_exclude={"password"})
 async def get_current_user(current_user: User = Depends(get_current_user)):
     """Retrieve the current user"""
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     return current_user
 
 
