@@ -1,8 +1,9 @@
 import dotenv
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
+from passlib.context import CryptContext
 
-from models import User
+from models import User, PyObjectId, UpdateUser
 
 from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
@@ -15,6 +16,7 @@ client = MongoClient(mongo_host)
 db = client['lingua-tile']
 user_collection = db['users']
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = dotenv.get_key(".env", "SECRET_KEY")
 ALGORITHM = "HS256"
 
@@ -51,10 +53,12 @@ async def create_user(user: User):
 
     return user
 
+
 @router.get("/", response_model=User, response_model_exclude={"password"})
 async def get_current_user(current_user: User = Depends(get_current_user)):
     """Retrieve the current user"""
     return current_user
+
 
 @router.get("/{user_id}", response_model=User, response_model_exclude={"password"})
 async def get_user(user_id: str):
@@ -62,20 +66,45 @@ async def get_user(user_id: str):
     user = user_collection.find_one({"_id": user_id})
     return User(**user)
 
+
 @router.get("/all", response_model=User, response_model_exclude={"password"})
 async def get_all_users():
     """Retrieve all users from the database"""
     users = user_collection.find()
     return [User(**user) for user in users]
+
+
+@router.put("/update/{user_id}", response_model=User, response_model_exclude={"password"})
+async def update_user(user_id: str, updated_info: UpdateUser, current_user: User = Depends(get_current_user)):
+    """Update a user in the database by id"""
+    user_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
+
+    if "password" in user_info_to_update:
+        if user_info_to_update["password"].strip() != "":
+            user_info_to_update["password"] = pwd_context.hash(user_info_to_update["password"])
+        else:
+            del user_info_to_update["password"]
+    # update a user in the database by id
+    if not is_admin(current_user) and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this user")
+
+    user_id = ObjectId(user_id)
+    old_user = user_collection.find_one_and_update({"_id": user_id}, {"$set": user_info_to_update})
+    if old_user is None:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+
+    updated_user = user_collection.find_one({"_id": user_id})
+    return User(**updated_user)
+
+
 @router.delete("/delete/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
     """Delete a user from the database by id"""
-    print(f"User: {current_user}")
     if not is_admin(current_user) and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this user")
 
     user_id = ObjectId(user_id)
     user = user_collection.find_one_and_delete({"_id": user_id})
-    print(f"User deleted: {user}")
+
     if user is None:
         raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
