@@ -48,6 +48,9 @@ def is_admin(user: User):
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user: User):
     """Create a new user in the database"""
+    if user_collection.find_one({"username": user.username}):
+        raise HTTPException(status_code=400, detail="Username already exists")
+
     user.hash_password()
     user_collection.insert_one(user.dict(by_alias=True))
 
