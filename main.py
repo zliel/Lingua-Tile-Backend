@@ -6,8 +6,8 @@ from api.translations import router as translations_router
 from api.auth import router as auth_router
 from api.users import router as users_router
 
-title = "Japanese Flashcards API"
-description = "An API for creating and studying Japanese flashcards"
+title = "LinguaTile API"
+description = "An API used by LinguaTile to aid in studying Japanese"
 app = FastAPI(title=title, description=description, version="0.1.0")
 app.include_router(cards_router)
 app.include_router(lessons_router)
