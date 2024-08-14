@@ -48,6 +48,9 @@ def is_admin(user: User):
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user: User):
     """Create a new user in the database"""
+    if user_collection.find_one({"username": user.username}):
+        raise HTTPException(status_code=400, detail="Username already exists")
+
     user.hash_password()
     user_collection.insert_one(user.dict(by_alias=True))
 
@@ -57,19 +60,27 @@ async def create_user(user: User):
 @router.get("/", response_model=User, response_model_exclude={"password"})
 async def get_current_user(current_user: User = Depends(get_current_user)):
     """Retrieve the current user"""
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     return current_user
 
 
 @router.get("/{user_id}", response_model=User, response_model_exclude={"password"})
-async def get_user(user_id: str):
+async def get_user(user_id: str, current_user: User = Depends(get_current_user)):
     """Retrieve a user from the database by id"""
+    if not is_admin(current_user) and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
     user = user_collection.find_one({"_id": user_id})
     return User(**user)
 
 
 @router.get("/all", response_model=User, response_model_exclude={"password"})
-async def get_all_users():
+async def get_all_users(current_user: User = Depends(get_current_user)):
     """Retrieve all users from the database"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized to view all users")
+
     users = user_collection.find()
     return [User(**user) for user in users]
 
