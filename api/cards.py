@@ -63,7 +63,7 @@ async def update_card(card_id: PyObjectId, updated_info: UpdateCard, current_use
     """Update a card in the database by id"""
     if not is_admin(current_user):
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
     card_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
     # update a card in the database by id
@@ -90,8 +90,11 @@ async def update_card(card_id: PyObjectId, updated_info: UpdateCard, current_use
 
 
 @router.delete("/delete/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_card(card_id: PyObjectId):
+async def delete_card(card_id: PyObjectId, current_user: User = Depends(get_current_user)):
     """Delete a card from the database by id"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     card_collection.delete_one({"_id": card_id})
 
     # Delete the card from all lessons that it is in
