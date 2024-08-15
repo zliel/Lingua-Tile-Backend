@@ -2,9 +2,10 @@ import bson
 import dotenv
 from fastapi.encoders import jsonable_encoder
 
-from models import Card, UpdateCard, PyObjectId
+from models import Card, UpdateCard, PyObjectId, User
+from api.users import get_current_user, is_admin
 
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from pymongo import MongoClient
 
 router = APIRouter(prefix="/api/cards", tags=["Cards"])
@@ -16,8 +17,10 @@ lesson_collection = db['lessons']
 
 
 @router.get("/all")
-async def get_all_cards():
+async def get_all_cards(current_user: User = Depends(get_current_user)):
     """Retrieve all cards from the database"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     cards = card_collection.find()
     return [Card(**card) for card in cards]
 
