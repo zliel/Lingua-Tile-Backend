@@ -59,8 +59,11 @@ async def get_cards_by_lesson(lesson_id: PyObjectId):
 
 
 @router.put("/update/{card_id}")
-async def update_card(card_id: PyObjectId, updated_info: UpdateCard):
+async def update_card(card_id: PyObjectId, updated_info: UpdateCard, current_user: User = Depends(get_current_user)):
     """Update a card in the database by id"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
     card_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
     # update a card in the database by id
