@@ -26,8 +26,10 @@ async def get_all_cards(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_card(card: Card):
+async def create_card(card: Card, current_user: User = Depends(get_current_user)):
     """Create a new card in the database"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     # If we don't encode the card, we run into a problem where the card id is not a string
     new_card = jsonable_encoder(card)
