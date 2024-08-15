@@ -75,7 +75,7 @@ async def get_user(user_id: str, current_user: User = Depends(get_current_user))
     return User(**user)
 
 
-@router.get("/all", response_model=User, response_model_exclude={"password"})
+@router.get("/admin/all", response_model=list[User], response_model_exclude={"password"})
 async def get_all_users(current_user: User = Depends(get_current_user)):
     """Retrieve all users from the database"""
     if not is_admin(current_user):
