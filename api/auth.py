@@ -2,8 +2,9 @@ import dotenv
 import jwt
 
 from models import User
+from api.users import get_current_user, is_admin
 
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from pymongo import MongoClient
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -47,3 +48,12 @@ async def login_user(user: User):
     )
 
     return {"token": access_token, "token_type": "bearer"}
+
+
+@router.get("/check-admin", status_code=status.HTTP_200_OK)
+async def check_admin(current_user: User = Depends(get_current_user)):
+    """Check if the current user is an admin"""
+    if is_admin(current_user):
+        return {"isAdmin": True}
+    else:
+        return {"isAdmin": False}

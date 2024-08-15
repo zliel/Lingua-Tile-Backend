@@ -75,14 +75,21 @@ async def get_user(user_id: str, current_user: User = Depends(get_current_user))
     return User(**user)
 
 
-@router.get("/all", response_model=User, response_model_exclude={"password"})
+@router.get("/admin/all", response_model=list[User], response_model_exclude={"password"})
 async def get_all_users(current_user: User = Depends(get_current_user)):
     """Retrieve all users from the database"""
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Not authorized to view all users")
 
     users = user_collection.find()
-    return [User(**user) for user in users]
+    user_list = []
+    for user in users:
+        if user is not None:
+            user_list.append(User(**user))
+        else:
+            raise HTTPException(status_code=404, detail="No users found")
+
+    return user_list
 
 
 @router.put("/update/{user_id}", response_model=User, response_model_exclude={"password"})
