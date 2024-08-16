@@ -2,9 +2,10 @@ import bson
 import dotenv
 from fastapi.encoders import jsonable_encoder
 
-from models import Card, UpdateCard, PyObjectId
+from models import Card, UpdateCard, PyObjectId, User
+from api.users import get_current_user, is_admin
 
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from pymongo import MongoClient
 
 router = APIRouter(prefix="/api/cards", tags=["Cards"])
@@ -16,15 +17,19 @@ lesson_collection = db['lessons']
 
 
 @router.get("/all")
-async def get_all_cards():
+async def get_all_cards(current_user: User = Depends(get_current_user)):
     """Retrieve all cards from the database"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     cards = card_collection.find()
     return [Card(**card) for card in cards]
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_card(card: Card):
+async def create_card(card: Card, current_user: User = Depends(get_current_user)):
     """Create a new card in the database"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     # If we don't encode the card, we run into a problem where the card id is not a string
     new_card = jsonable_encoder(card)
@@ -54,8 +59,11 @@ async def get_cards_by_lesson(lesson_id: PyObjectId):
 
 
 @router.put("/update/{card_id}")
-async def update_card(card_id: PyObjectId, updated_info: UpdateCard):
+async def update_card(card_id: PyObjectId, updated_info: UpdateCard, current_user: User = Depends(get_current_user)):
     """Update a card in the database by id"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     card_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
     # update a card in the database by id
@@ -82,8 +90,11 @@ async def update_card(card_id: PyObjectId, updated_info: UpdateCard):
 
 
 @router.delete("/delete/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_card(card_id: PyObjectId):
+async def delete_card(card_id: PyObjectId, current_user: User = Depends(get_current_user)):
     """Delete a card from the database by id"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     card_collection.delete_one({"_id": card_id})
 
     # Delete the card from all lessons that it is in
