@@ -76,15 +76,15 @@ async def update_card(card_id: PyObjectId, updated_info: UpdateCard, current_use
         raise HTTPException(status_code=404, detail=f"Card with id {card_id} was not found after update")
 
     # If the card_info_to_update contains lesson IDs, we need to add the card to the lessons
-    if card_info_to_update.__contains__("lesson_id"):
-        for lesson_id in card_info_to_update["lesson_id"]:
-            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$addToSet": {"cards": card_id}})
+    if card_info_to_update.__contains__("lesson_ids"):
+        for lesson_id in card_info_to_update["lesson_ids"]:
+            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$addToSet": {"card_ids": card_id}})
 
     # If the card was in a lesson before, but not after updating, remove it from that lesson
-    if old_card["lesson_id"]:
-        for lesson_id in old_card["lesson_id"]:
-            if lesson_id not in card_info_to_update["lesson_id"]:
-                lesson_collection.find_one_and_update({"_id": lesson_id}, {"$pull": {"cards": card_id}})
+    if old_card["lesson_ids"]:
+        for lesson_id in old_card["lesson_ids"]:
+            if lesson_id not in card_info_to_update["lesson_ids"]:
+                lesson_collection.find_one_and_update({"_id": lesson_id}, {"$pull": {"card_ids": card_id}})
 
     return updated_card
 
