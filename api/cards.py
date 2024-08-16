@@ -37,8 +37,8 @@ async def create_card(card: Card, current_user: User = Depends(get_current_user)
     card_collection.insert_one(new_card)
 
     # Update the lessons that the card is in
-    if new_card["lesson_id"]:
-        for lesson_id in new_card["lesson_id"]:
+    if new_card["lesson_ids"]:
+        for lesson_id in new_card["lesson_ids"]:
             lesson_collection.find_one_and_update({"_id": lesson_id}, {"$addToSet": {"cards": new_card["_id"]}})
 
     return card
@@ -54,7 +54,7 @@ async def get_card(card_id: PyObjectId):
 @router.get("/lesson/{lesson_id}")
 async def get_cards_by_lesson(lesson_id: PyObjectId):
     """Retrieve all cards associated with a lesson from the database by lesson id"""
-    cards = card_collection.find({"lesson_id": lesson_id})
+    cards = card_collection.find({"lesson_ids": lesson_id})
     return [Card(**card) for card in cards]
 
 
@@ -97,5 +97,4 @@ async def delete_card(card_id: PyObjectId, current_user: User = Depends(get_curr
 
     card_collection.delete_one({"_id": card_id})
 
-    # Delete the card from all lessons that it is in
-    lesson_collection.update_many({}, {"$pull": {"cards": card_id}})
+    lesson_collection.update_many({}, {"$pull": {"card_ids": card_id}})
