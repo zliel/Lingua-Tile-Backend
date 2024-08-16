@@ -5,6 +5,7 @@ from api.lessons import router as lessons_router
 from api.translations import router as translations_router
 from api.auth import router as auth_router
 from api.users import router as users_router
+from api.sections import router as section_router
 
 title = "LinguaTile API"
 description = "An API used by LinguaTile to aid in studying Japanese"
@@ -14,6 +15,7 @@ app.include_router(lessons_router)
 app.include_router(translations_router)
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(section_router)
 origins = ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,

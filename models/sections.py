@@ -1,16 +1,12 @@
 from typing import List
-
-from bson.objectid import ObjectId
 from pydantic import BaseModel, Field
-
 from models.py_object_id import PyObjectId
+from bson.objectid import ObjectId
 
-
-class Card(BaseModel):
+class Section(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    front_text: str = Field(...)
-    back_text: str = Field(...)
-    lesson_ids: List[str] = Field(...)
+    name: str = Field(...)
+    lesson_ids: List[PyObjectId] = Field(default_factory=list)
 
     class Config:
         arbitrary_types_allowed = True
@@ -18,8 +14,7 @@ class Card(BaseModel):
         json_encoders = {ObjectId: lambda oid: str(oid)}
         schema_extra = {
             "example": {
-                "front_text": "Hello",
-                "back_text": "こんにちは",
+                "name": "Kana",
                 "lesson_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
             }
         }

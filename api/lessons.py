@@ -1,3 +1,5 @@
+from typing import List
+
 import dotenv
 from fastapi.encoders import jsonable_encoder
 
@@ -16,10 +18,11 @@ lesson_collection = db['lessons']
 card_collection = db['cards']
 
 
-@router.get("/all")
+@router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
 async def get_all_lessons():
     """Retrieve all lessons from the database"""
     lessons = lesson_collection.find()
+
     return [Lesson(**lesson) for lesson in lessons]
 
 
@@ -31,8 +34,8 @@ async def create_lesson(lesson: Lesson):
     lesson_collection.insert_one(new_lesson)
 
     # Update the cards that are in the lesson
-    if new_lesson["cards"] is not None:
-        for card_id in new_lesson["cards"]:
+    if new_lesson["card_ids"] is not None:
+        for card_id in new_lesson["card_ids"]:
             card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_id": new_lesson["_id"]}})
     return lesson
 
