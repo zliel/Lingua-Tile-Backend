@@ -46,8 +46,7 @@ async def login_user(user: User):
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-
-    return {"token": access_token, "token_type": "bearer"}
+    return {"token": access_token, "token_type": "bearer", "isAdmin": "admin" in found_user.get("roles", []), "username": found_user.get("username", "")}
 
 
 @router.get("/check-admin", status_code=status.HTTP_200_OK)
