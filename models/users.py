@@ -4,7 +4,7 @@ from bson.objectid import ObjectId
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
 
-from models.py_object_id import PyObjectId
+from .py_object_id import PyObjectId
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -13,7 +13,7 @@ class User(BaseModel):
     username: str = Field(...)
     password: str = Field(...)
     roles: List[str] = Field(default=["user"])
-    completed_lessons: List[str] = Field(default=[])
+    completed_lessons: List[PyObjectId] = Field(default=[])
 
     class Config:
         arbitrary_types_allowed = True
