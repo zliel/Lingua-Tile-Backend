@@ -21,7 +21,8 @@ class UpdateLesson(BaseModel):
         allow_population_by_field_name = True
         schema_extra = {
             "example": {
-                "name": "Hello",
-                "cards": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
+                "title": "Hello",
+                "section_id": "5f9f1b9b9c9d1c0b8c8b9c9d",
+                "card_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
             }
         }
