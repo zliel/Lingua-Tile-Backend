@@ -1,7 +1,6 @@
 from typing import List
 
 import dotenv
-from fastapi.encoders import jsonable_encoder
 
 from pymongo import MongoClient
 from fastapi import APIRouter, status, HTTPException
@@ -89,4 +88,6 @@ async def delete_lesson(lesson_id: PyObjectId):
     lesson_collection.delete_one({"_id": lesson_id})
 
     # update all cards associated with the lesson to reflect the deletion of the lesson
-    card_collection.update_many({"lesson_id": lesson_id}, {"$pull": {"lesson_id": lesson_id}})
+    card_collection.update_many({"lesson_ids": lesson_id}, {"$pull": {"lesson_ids": lesson_id}})
+
+    section_collection.update_one({"lesson_ids": lesson_id}, {"$pull": {"lesson_ids": lesson_id}})
