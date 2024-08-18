@@ -57,7 +57,7 @@ async def get_cards_by_lesson(lesson_id: PyObjectId):
     return [Card(**card) for card in cards]
 
 
-@router.put("/update/{card_id}")
+@router.put("/update/{card_id}", response_model=Card)
 async def update_card(card_id: PyObjectId, updated_info: UpdateCard, current_user: User = Depends(get_current_user)):
     """Update a card in the database by id"""
     if not is_admin(current_user):
