@@ -32,9 +32,8 @@ async def create_card(card: Card, current_user: User = Depends(get_current_user)
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     # If we don't encode the card, we run into a problem where the card id is not a string
-    new_card = jsonable_encoder(card)
-
-    card_collection.insert_one(new_card)
+    card_collection.insert_one(card.dict(by_alias=True))
+    new_card = card_collection.find_one({"_id": card.id})
 
     # Update the lessons that the card is in
     if new_card["lesson_ids"]:
