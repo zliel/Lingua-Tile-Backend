@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from bson.objectid import ObjectId
 from pydantic import BaseModel, Field
 from models.py_object_id import PyObjectId
@@ -9,6 +9,8 @@ class Lesson(BaseModel):
     title: str = Field(...)
     section_id: str = Field(...)
     card_ids: List[str] = Field(default_factory=list)
+    section_id: Optional[PyObjectId] = Field(default=None)
+    card_ids: List[PyObjectId] = Field(default=[])
 
     class Config:
         arbitrary_types_allowed = True
