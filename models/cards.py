@@ -3,14 +3,14 @@ from typing import List
 from bson.objectid import ObjectId
 from pydantic import BaseModel, Field
 
-from models.py_object_id import PyObjectId
+from .py_object_id import PyObjectId
 
 
 class Card(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     front_text: str = Field(...)
     back_text: str = Field(...)
-    lesson_ids: List[str] = Field(...)
+    lesson_ids: List[PyObjectId] = Field(...)
 
     class Config:
         arbitrary_types_allowed = True
