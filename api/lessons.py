@@ -16,6 +16,7 @@ client = MongoClient(mongo_host)
 db = client['lingua-tile']
 lesson_collection = db['lessons']
 card_collection = db['cards']
+section_collection = db['sections']
 
 
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
@@ -69,8 +70,15 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     if updated_lesson["card_ids"]:
         for card_id in updated_lesson["card_ids"]:
             # add the lesson id to the list of lessons the card is associated with
-            card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_id": lesson_id}})
             card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_ids": lesson_id}})
+
+    if old_lesson["section_id"] and not updated_lesson["section_id"]:
+        section_collection.find_one_and_update({"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": lesson_id}})
+    elif not old_lesson["section_id"] and updated_lesson["section_id"]:
+        section_collection.find_one_and_update({"_id": updated_lesson["section_id"]}, {"$addToSet": {"lesson_ids": lesson_id}})
+    elif old_lesson["section_id"] != updated_lesson["section_id"]:
+        section_collection.find_one_and_update({"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": lesson_id}})
+        section_collection.find_one_and_update({"_id": updated_lesson["section_id"]}, {"$addToSet": {"lesson_ids": lesson_id}})
 
     return Lesson(**updated_lesson)
 
