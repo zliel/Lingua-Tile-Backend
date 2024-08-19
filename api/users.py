@@ -1,5 +1,4 @@
 import dotenv
-from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
 from passlib.context import CryptContext
 
@@ -66,7 +65,7 @@ async def get_current_user(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/{user_id}", response_model=User, response_model_exclude={"password"})
-async def get_user(user_id: str, current_user: User = Depends(get_current_user)):
+async def get_user(user_id: PyObjectId, current_user: User = Depends(get_current_user)):
     """Retrieve a user from the database by id"""
     if not is_admin(current_user) and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to view this user")
@@ -93,7 +92,7 @@ async def get_all_users(current_user: User = Depends(get_current_user)):
 
 
 @router.put("/update/{user_id}", response_model=User, response_model_exclude={"password"})
-async def update_user(user_id: str, updated_info: UpdateUser, current_user: User = Depends(get_current_user)):
+async def update_user(user_id: PyObjectId, updated_info: UpdateUser, current_user: User = Depends(get_current_user)):
     """Update a user in the database by id"""
     user_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
 
@@ -106,7 +105,6 @@ async def update_user(user_id: str, updated_info: UpdateUser, current_user: User
     if not is_admin(current_user) and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
 
-    user_id = ObjectId(user_id)
     old_user = user_collection.find_one_and_update({"_id": user_id}, {"$set": user_info_to_update})
     if old_user is None:
         raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
@@ -116,12 +114,11 @@ async def update_user(user_id: str, updated_info: UpdateUser, current_user: User
 
 
 @router.delete("/delete/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
+async def delete_user(user_id: PyObjectId, current_user: User = Depends(get_current_user)):
     """Delete a user from the database by id"""
     if not is_admin(current_user) and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this user")
 
-    user_id = ObjectId(user_id)
     user = user_collection.find_one_and_delete({"_id": user_id})
 
     if user is None:

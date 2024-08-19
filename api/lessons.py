@@ -1,7 +1,6 @@
 from typing import List
 
 import dotenv
-from fastapi.encoders import jsonable_encoder
 
 from pymongo import MongoClient
 from fastapi import APIRouter, status, HTTPException
@@ -16,6 +15,7 @@ client = MongoClient(mongo_host)
 db = client['lingua-tile']
 lesson_collection = db['lessons']
 card_collection = db['cards']
+section_collection = db['sections']
 
 
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
@@ -29,10 +29,9 @@ async def get_all_lessons():
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_lesson(lesson: Lesson):
     """Create a new lesson in the database"""
-    new_lesson = jsonable_encoder(lesson)
 
-    lesson_collection.insert_one(new_lesson)
-
+    lesson_collection.insert_one(lesson.dict(by_alias=True))
+    new_lesson = lesson_collection.find_one({"_id": lesson.id})
     # Update the cards that are in the lesson
     if new_lesson["card_ids"] is not None:
         for card_id in new_lesson["card_ids"]:
@@ -51,6 +50,8 @@ async def get_lesson(lesson_id: PyObjectId):
 async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     """Update a lesson in the database by id"""
     lesson_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
+    if not updated_info.section_id:
+        lesson_info_to_update["section_id"] = None
 
     # update a lesson in the database by id and return the old lesson to help with updating the cards
     old_lesson = lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": lesson_info_to_update})
@@ -61,16 +62,25 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     updated_lesson = lesson_collection.find_one({"_id": lesson_id})
 
     # if a card was in the old lesson but not the new lesson, remove the lesson id from the card
-    if old_lesson["cards"]:
-        for card_id in old_lesson["cards"]:
-            if card_id not in updated_lesson["cards"]:
-                card_collection.find_one_and_update({"_id": card_id}, {"$pull": {"lesson_id": lesson_id}})
+    if old_lesson["card_ids"]:
+        for card_id in old_lesson["card_ids"]:
+            if card_id not in updated_lesson["card_ids"]:
+                card_collection.find_one_and_update({"_id": card_id}, {"$pull": {"lesson_ids": lesson_id}})
 
     # If the lesson contains cards, update the cards to reflect the new lesson
-    if updated_lesson["cards"]:
-        for card_id in updated_lesson["cards"]:
+    if updated_lesson["card_ids"]:
+        for card_id in updated_lesson["card_ids"]:
             # add the lesson id to the list of lessons the card is associated with
-            card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_id": lesson_id}})
+            card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_ids": lesson_id}})
+
+    # handle updates to the section_id fields
+    print(old_lesson["section_id"], updated_lesson["section_id"])
+    if old_lesson["section_id"] != updated_lesson["section_id"]:
+        # remove the lesson id from the old section
+        section_collection.find_one_and_update({"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": lesson_id}})
+        # add the lesson id to the new section
+        section_collection.find_one_and_update({"_id": updated_lesson["section_id"]}, {"$addToSet": {"lesson_ids": lesson_id}})
+
 
     return Lesson(**updated_lesson)
 
@@ -81,4 +91,6 @@ async def delete_lesson(lesson_id: PyObjectId):
     lesson_collection.delete_one({"_id": lesson_id})
 
     # update all cards associated with the lesson to reflect the deletion of the lesson
-    card_collection.update_many({"lesson_id": lesson_id}, {"$pull": {"lesson_id": lesson_id}})
+    card_collection.update_many({"lesson_ids": lesson_id}, {"$pull": {"lesson_ids": lesson_id}})
+
+    section_collection.update_one({"lesson_ids": lesson_id}, {"$pull": {"lesson_ids": lesson_id}})

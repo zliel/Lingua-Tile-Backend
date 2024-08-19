@@ -1,12 +1,12 @@
 from typing import List
 from pydantic import BaseModel, Field
-from models.py_object_id import PyObjectId
+from .py_object_id import PyObjectId
 from bson.objectid import ObjectId
 
 class Section(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     name: str = Field(...)
-    lesson_ids: List[PyObjectId] = Field(default_factory=list)
+    lesson_ids: List[PyObjectId] = Field(default=[])
 
     class Config:
         arbitrary_types_allowed = True
