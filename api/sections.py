@@ -55,8 +55,13 @@ async def update_section(section_id: PyObjectId, updated_info: UpdateSection, cu
 
     updated_section = section_collection.find_one({"_id": section_id})
 
+    for lesson_id in old_section["lesson_ids"]:
+        if lesson_id not in updated_section["lesson_ids"]:
+            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$unset": {"section_id": ""}})
+
     for lesson_id in updated_section["lesson_ids"]:
-        lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": {"section_id": updated_section["_id"]}})
+        if lesson_id not in old_section["lesson_ids"]:
+            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": {"section_id": updated_section["_id"]}})
 
     return Section(**updated_section)
 
