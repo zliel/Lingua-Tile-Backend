@@ -50,6 +50,8 @@ async def get_lesson(lesson_id: PyObjectId):
 async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     """Update a lesson in the database by id"""
     lesson_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
+    if not updated_info.section_id:
+        lesson_info_to_update["section_id"] = None
 
     # update a lesson in the database by id and return the old lesson to help with updating the cards
     old_lesson = lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": lesson_info_to_update})
@@ -71,13 +73,14 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
             # add the lesson id to the list of lessons the card is associated with
             card_collection.find_one_and_update({"_id": card_id}, {"$addToSet": {"lesson_ids": lesson_id}})
 
-    if old_lesson["section_id"] and not updated_lesson["section_id"]:
+    # handle updates to the section_id fields
+    print(old_lesson["section_id"], updated_lesson["section_id"])
+    if old_lesson["section_id"] != updated_lesson["section_id"]:
+        # remove the lesson id from the old section
         section_collection.find_one_and_update({"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": lesson_id}})
-    elif not old_lesson["section_id"] and updated_lesson["section_id"]:
+        # add the lesson id to the new section
         section_collection.find_one_and_update({"_id": updated_lesson["section_id"]}, {"$addToSet": {"lesson_ids": lesson_id}})
-    elif old_lesson["section_id"] != updated_lesson["section_id"]:
-        section_collection.find_one_and_update({"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": lesson_id}})
-        section_collection.find_one_and_update({"_id": updated_lesson["section_id"]}, {"$addToSet": {"lesson_ids": lesson_id}})
+
 
     return Lesson(**updated_lesson)
 
