@@ -24,7 +24,12 @@ async def create_section(section: Section, current_user: User = Depends(get_curr
     new_section = section_collection.find_one({"_id": section.id})
 
     for lesson_id in new_section["lesson_ids"]:
-        lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": {"section_id": new_section["_id"]}})
+        # This returns the lesson BEFORE the update
+        old_lesson = lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": {"section_id": new_section["_id"]}})
+        # If a lesson's section id has been updated, the old section it was in should have its lesson id removed
+        if old_lesson and old_lesson.get("section_id") is not None:
+            if old_lesson["section_id"] != new_section["_id"]:
+                section_collection.find_one_and_update({"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": old_lesson["_id"]}})
     return section
 
 
