@@ -68,6 +68,12 @@ async def update_section(section_id: PyObjectId, updated_info: UpdateSection, cu
         if lesson_id not in old_section["lesson_ids"]:
             lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": {"section_id": updated_section["_id"]}})
 
+        # Remove the lessons id from other sections
+        section_collection.update_many(
+            {"_id": {"$ne": section_id}, "lesson_ids": {"$in": [lesson_id]}},
+            {"$pull": {"lesson_ids": lesson_id}}
+        )
+
     return Section(**updated_section)
 
 @router.delete("/delete/{section_id}", status_code=status.HTTP_204_NO_CONTENT)
