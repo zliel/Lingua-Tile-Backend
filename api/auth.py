@@ -2,7 +2,8 @@ import dotenv
 import jwt
 
 from models import User
-from api.users import get_current_user, is_admin
+from api.users import is_admin
+from api.dependencies import get_current_user, SECRET_KEY, ALGORITHM, pwd_context, get_db
 
 from fastapi import APIRouter, status, HTTPException, Depends
 from pymongo import MongoClient
@@ -10,14 +11,8 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
-mongo_host = dotenv.get_key(".env", "MONGO_HOST")
-client = MongoClient(mongo_host)
-db = client['lingua-tile']
-user_collection = db['users']
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = dotenv.get_key(".env", "SECRET_KEY")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -32,8 +27,9 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login_user(user: User):
+async def login_user(user: User, db=Depends(get_db)):
     """Login a user"""
+    user_collection = db['users']
     found_user = user_collection.find_one({"username": user.username})
 
     if found_user is None:
