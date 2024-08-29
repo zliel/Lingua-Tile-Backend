@@ -1,7 +1,10 @@
 from typing import List
-from pydantic import BaseModel, Field
-from .py_object_id import PyObjectId
+
 from bson.objectid import ObjectId
+from pydantic import BaseModel, Field
+
+from .py_object_id import PyObjectId
+
 
 class Section(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")

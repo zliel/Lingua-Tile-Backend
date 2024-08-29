@@ -8,6 +8,7 @@ from .py_object_id import PyObjectId
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 class User(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     username: str = Field(...)
@@ -24,14 +25,14 @@ class User(BaseModel):
                 "username": "johndoe",
                 "password": "password",
                 "roles": ["user"],
-                "completed_lessons": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
+                "completed_lessons": ["5f9f1b9b9c9d1c0b8c8b9c9d"],
             },
             "example2": {
                 "username": "admindoe",
                 "password": "password",
                 "roles": ["admin"],
-                "completed_lessons": []
-            }
+                "completed_lessons": [],
+            },
         }
 
     def hash_password(self):

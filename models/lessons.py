@@ -1,7 +1,10 @@
 from typing import List, Optional
+
 from bson.objectid import ObjectId
 from pydantic import BaseModel, Field, validator
+
 from .py_object_id import PyObjectId
+
 
 class Lesson(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")

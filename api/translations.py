@@ -1,6 +1,6 @@
 import dotenv
-from fastapi import APIRouter
 import requests
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/translations", tags=["Translations"])
 host = "deep-translate1.p.rapidapi.com"

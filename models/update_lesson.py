@@ -4,6 +4,7 @@ from pydantic import BaseModel, validator
 
 from .py_object_id import PyObjectId
 
+
 # define a pydantic model to update a lesson
 class UpdateLesson(BaseModel):
     title: Optional[str] = None

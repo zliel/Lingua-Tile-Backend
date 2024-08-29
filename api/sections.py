@@ -1,10 +1,7 @@
-import dotenv
 from fastapi import APIRouter, status, HTTPException, Depends
-from fastapi.encoders import jsonable_encoder
-from pymongo import MongoClient
 
-from api.users import is_admin
 from api.dependencies import get_current_user, get_db
+from api.users import is_admin
 from models import Section, PyObjectId, User
 from models.update_section import UpdateSection
 

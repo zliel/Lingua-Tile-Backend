@@ -1,10 +1,10 @@
-import jwt
-from pymongo import MongoClient
 import dotenv
+import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import jwt
 from passlib.context import CryptContext
+from pymongo import MongoClient
 
 from models import User
 

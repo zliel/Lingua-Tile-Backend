@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from .py_object_id import PyObjectId
 
+
 class UpdateCard(BaseModel):
     front_text: Optional[str] = None
     back_text: Optional[str] = None

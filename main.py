@@ -5,12 +5,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
+from api.auth import router as auth_router
 from api.cards import router as cards_router
 from api.lessons import router as lessons_router
-from api.translations import router as translations_router
-from api.auth import router as auth_router
-from api.users import router as users_router
 from api.sections import router as section_router
+from api.translations import router as translations_router
+from api.users import router as users_router
 
 title = "LinguaTile API"
 description = "An API used by LinguaTile to aid in studying Japanese"
@@ -37,7 +37,7 @@ async def root():
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-	exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
-	logging.error(f"{request}: {exc_str}")
-	content = {'status_code': 422, 'message': exc_str, 'data': None}
-	return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
+    logging.error(f"{request}: {exc_str}")
+    content = {'status_code': 422, 'message': exc_str, 'data': None}
+    return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)

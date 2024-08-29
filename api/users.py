@@ -1,10 +1,7 @@
-import dotenv
-from passlib.context import CryptContext
+from fastapi import APIRouter, status, HTTPException, Depends
 
 from api.dependencies import get_db, get_current_user, pwd_context
 from models import User, PyObjectId, UpdateUser
-
-from fastapi import APIRouter, status, HTTPException, Depends
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 

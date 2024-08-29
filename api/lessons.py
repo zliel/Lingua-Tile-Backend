@@ -1,9 +1,8 @@
 from typing import List
 
 import dotenv
-
-from pymongo import MongoClient
 from fastapi import APIRouter, status, HTTPException
+from pymongo import MongoClient
 
 from models import PyObjectId
 from models.lessons import Lesson
