@@ -17,6 +17,6 @@ class UpdateCard(BaseModel):
             "example": {
                 "front_text": "Hello",
                 "back_text": "こんにちは",
-                "lesson_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
+                "lesson_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"],
             }
         }

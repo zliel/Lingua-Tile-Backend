@@ -13,8 +13,5 @@ class UpdateSection(BaseModel):
         arbitrary_types_allowed = True
         allow_population_by_field_name = True
         schema_extra = {
-            "example": {
-                "name": "Hello",
-                "lesson_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
-            }
+            "example": {"name": "Hello", "lesson_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]}
         }

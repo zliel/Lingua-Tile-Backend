@@ -3,13 +3,18 @@ from datetime import datetime, timedelta
 import jwt
 from fastapi import APIRouter, status, HTTPException, Depends
 
-from api.dependencies import get_current_user, SECRET_KEY, ALGORITHM, pwd_context, get_db
+from api.dependencies import (
+    get_current_user,
+    SECRET_KEY,
+    ALGORITHM,
+    pwd_context,
+    get_db,
+)
 from api.users import is_admin
 from models import User
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
-
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -26,12 +31,12 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 @router.post("/login", status_code=status.HTTP_200_OK)
 async def login_user(user: User, db=Depends(get_db)):
     """Login a user"""
-    user_collection = db['users']
+    user_collection = db["users"]
     found_user = user_collection.find_one({"username": user.username})
 
     if found_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    elif not pwd_context.verify(user.password, found_user['password']):
+    elif not pwd_context.verify(user.password, found_user["password"]):
         raise HTTPException(status_code=401, detail="Incorrect password")
 
     # Convert found_user to User model and remove its password from the response
@@ -39,7 +44,12 @@ async def login_user(user: User, db=Depends(get_db)):
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    return {"token": access_token, "token_type": "bearer", "isAdmin": "admin" in found_user.get("roles", []), "username": found_user.get("username", "")}
+    return {
+        "token": access_token,
+        "token_type": "bearer",
+        "isAdmin": "admin" in found_user.get("roles", []),
+        "username": found_user.get("username", ""),
+    }
 
 
 @router.get("/check-admin", status_code=status.HTTP_200_OK)

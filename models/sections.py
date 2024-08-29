@@ -16,8 +16,5 @@ class Section(BaseModel):
         allow_population_by_field_name = True
         json_encoders = {ObjectId: lambda oid: str(oid)}
         schema_extra = {
-            "example": {
-                "name": "Kana",
-                "lesson_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
-            }
+            "example": {"name": "Kana", "lesson_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]}
         }

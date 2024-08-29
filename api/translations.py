@@ -11,11 +11,7 @@ headers = {
     "content-type": "application/json",
 }
 
-payload = {
-    "q": "Hello, world!",
-    "source": "en",
-    "target": "es"
-}
+payload = {"q": "Hello, world!", "source": "en", "target": "es"}
 
 
 @router.get("/{src_text}/{src_lang}/{target_lang}", tags=["Translations"])
@@ -49,5 +45,8 @@ async def get_languages() -> list:
     # Calling the deep-translate API to get a list of languages is costly, so we'll just return English and Japanese
     # until I figure out whether I want to cache the results or save them in a MongoDB collection
 
-    languages = [{"language": "en", "name": "English"}, {"language": "ja", "name": "Japanese"}]
+    languages = [
+        {"language": "en", "name": "English"},
+        {"language": "ja", "name": "Japanese"},
+    ]
     return languages

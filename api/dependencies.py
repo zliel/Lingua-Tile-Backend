@@ -13,10 +13,11 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = dotenv.get_key(".env", "SECRET_KEY")
 ALGORITHM = "HS256"
 
+
 def get_db():
     mongo_host = dotenv.get_key(".env", "MONGO_HOST")
     client = MongoClient(mongo_host)
-    db = client['lingua-tile']
+    db = client["lingua-tile"]
     return db
 
 
@@ -27,16 +28,22 @@ def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
         username: str = payload.get("sub")
 
         if username is None:
-            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+            raise HTTPException(
+                status_code=401, detail="Invalid authentication credentials"
+            )
 
-        user_collection = db['users']
+        user_collection = db["users"]
 
         # Find the user in the database by username
         user = user_collection.find_one({"username": username})
         if user is None:
-            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+            raise HTTPException(
+                status_code=401, detail="Invalid authentication credentials"
+            )
 
         return User(**user)
 
     except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )

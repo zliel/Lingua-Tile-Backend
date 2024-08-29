@@ -9,29 +9,36 @@ router = APIRouter(prefix="/api/sections", tags=["Sections"])
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_section(section: Section, current_user: User = Depends(get_current_user), db=Depends(get_db)):
+async def create_section(
+    section: Section, current_user: User = Depends(get_current_user), db=Depends(get_db)
+):
     if not is_admin(current_user):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    section_collection = db['sections']
-    lesson_collection = db['lessons']
+    section_collection = db["sections"]
+    lesson_collection = db["lessons"]
 
     section_collection.insert_one(section.dict(by_alias=True))
     new_section = section_collection.find_one({"_id": section.id})
 
     for lesson_id in new_section["lesson_ids"]:
         # This returns the lesson BEFORE the update
-        old_lesson = lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": {"section_id": new_section["_id"]}})
+        old_lesson = lesson_collection.find_one_and_update(
+            {"_id": lesson_id}, {"$set": {"section_id": new_section["_id"]}}
+        )
         # If a lesson's section id has been updated, the old section it was in should have its lesson id removed
         if old_lesson and old_lesson.get("section_id") is not None:
             if old_lesson["section_id"] != new_section["_id"]:
-                section_collection.find_one_and_update({"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": old_lesson["_id"]}})
+                section_collection.find_one_and_update(
+                    {"_id": old_lesson["section_id"]},
+                    {"$pull": {"lesson_ids": old_lesson["_id"]}},
+                )
     return section
 
 
 @router.get("/all")
 async def get_all_sections(db=Depends(get_db)):
-    section_collection = db['sections']
+    section_collection = db["sections"]
 
     sections = section_collection.find()
     return [Section(**section) for section in sections]
@@ -39,7 +46,7 @@ async def get_all_sections(db=Depends(get_db)):
 
 @router.get("/{section_id}")
 async def get_section(section_id: PyObjectId, db=Depends(get_db)):
-    section_collection = db['sections']
+    section_collection = db["sections"]
 
     section = section_collection.find_one({"_id": section_id})
     if section is None:
@@ -48,15 +55,24 @@ async def get_section(section_id: PyObjectId, db=Depends(get_db)):
 
 
 @router.put("/update/{section_id}")
-async def update_section(section_id: PyObjectId, updated_info: UpdateSection, current_user: User = Depends(get_current_user), db=Depends(get_db)):
+async def update_section(
+    section_id: PyObjectId,
+    updated_info: UpdateSection,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
     if not is_admin(current_user):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    section_collection = db['sections']
-    lesson_collection = db['lessons']
+    section_collection = db["sections"]
+    lesson_collection = db["lessons"]
 
-    section_info_to_update = {k: v for k, v in updated_info.dict().items() if v is not None}
-    old_section = section_collection.find_one_and_update({"_id": section_id}, {"$set": section_info_to_update})
+    section_info_to_update = {
+        k: v for k, v in updated_info.dict().items() if v is not None
+    }
+    old_section = section_collection.find_one_and_update(
+        {"_id": section_id}, {"$set": section_info_to_update}
+    )
 
     if old_section is None:
         raise HTTPException(status_code=404, detail="Section not found")
@@ -65,27 +81,38 @@ async def update_section(section_id: PyObjectId, updated_info: UpdateSection, cu
 
     for lesson_id in old_section["lesson_ids"]:
         if lesson_id not in updated_section["lesson_ids"]:
-            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$unset": {"section_id": ""}})
+            lesson_collection.find_one_and_update(
+                {"_id": lesson_id}, {"$unset": {"section_id": ""}}
+            )
 
     for lesson_id in updated_section["lesson_ids"]:
         if lesson_id not in old_section["lesson_ids"]:
-            lesson_collection.find_one_and_update({"_id": lesson_id}, {"$set": {"section_id": updated_section["_id"]}})
+            lesson_collection.find_one_and_update(
+                {"_id": lesson_id}, {"$set": {"section_id": updated_section["_id"]}}
+            )
 
         # Remove the lessons id from other sections
         section_collection.update_many(
             {"_id": {"$ne": section_id}, "lesson_ids": {"$in": [lesson_id]}},
-            {"$pull": {"lesson_ids": lesson_id}}
+            {"$pull": {"lesson_ids": lesson_id}},
         )
 
     return Section(**updated_section)
 
+
 @router.delete("/delete/{section_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_section(section_id: PyObjectId, current_user: User = Depends(get_current_user), db=Depends(get_db)):
+async def delete_section(
+    section_id: PyObjectId,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
     if not is_admin(current_user):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    section_collection = db['sections']
-    lesson_collection = db['lessons']
+    section_collection = db["sections"]
+    lesson_collection = db["lessons"]
 
     section_collection.delete_one({"_id": section_id})
-    lesson_collection.update_many({"section_id": section_id}, {"$unset": {"section_id": ""}})
+    lesson_collection.update_many(
+        {"section_id": section_id}, {"$unset": {"section_id": ""}}
+    )

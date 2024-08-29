@@ -11,7 +11,7 @@ class UpdateLesson(BaseModel):
     section_id: Optional[PyObjectId] = None
     card_ids: Optional[List[PyObjectId]] = None
 
-    @validator('section_id', pre=True, always=True)
+    @validator("section_id", pre=True, always=True)
     def validate_section_id(cls, v):
         if v == "":
             return None
@@ -24,6 +24,6 @@ class UpdateLesson(BaseModel):
             "example": {
                 "title": "Hello",
                 "section_id": "5f9f1b9b9c9d1c0b8c8b9c9d",
-                "card_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"]
+                "card_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"],
             }
         }
