@@ -21,7 +21,7 @@ app.include_router(translations_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(section_router)
-origins = ["http://localhost:3000"]
+origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
