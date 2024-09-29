@@ -1,10 +1,13 @@
-import dotenv
+import os
+
 import requests
+from dotenv import load_dotenv
 from fastapi import APIRouter
 
+load_dotenv(".env")
 router = APIRouter(prefix="/api/translations", tags=["Translations"])
 host = "deep-translate1.p.rapidapi.com"
-api_key = dotenv.get_key(".env", "API_KEY")
+api_key = os.getenv("API_KEY")
 headers = {
     "x-rapidapi-host": host,
     "x-rapidapi-key": api_key,
