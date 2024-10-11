@@ -1,5 +1,8 @@
+import os
+
 import dotenv
 import jwt
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
@@ -8,14 +11,15 @@ from pymongo import MongoClient
 
 from models import User
 
+load_dotenv(".env")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = dotenv.get_key(".env", "SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 
 
 def get_db():
-    mongo_host = dotenv.get_key(".env", "MONGO_HOST")
+    mongo_host = os.getenv("MONGO_HOST")
     client = MongoClient(mongo_host)
     db = client["lingua-tile"]
     return db

@@ -1,6 +1,8 @@
+import os
 from typing import List
 
 import dotenv
+from dotenv import load_dotenv
 from fastapi import APIRouter, status, HTTPException
 from pymongo import MongoClient
 
@@ -8,8 +10,9 @@ from models import PyObjectId
 from models.lessons import Lesson
 from models.update_lesson import UpdateLesson
 
+load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
-mongo_host = dotenv.get_key(".env", "MONGO_HOST")
+mongo_host = os.getenv("MONGO_HOST")
 client = MongoClient(mongo_host)
 db = client["lingua-tile"]
 lesson_collection = db["lessons"]
