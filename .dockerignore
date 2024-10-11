@@ -1,1 +1,5 @@
 .env*
+venv
+.idea
+TODO.md
+.gitignore
