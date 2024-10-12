@@ -1,6 +1,7 @@
 import os
 
 import dotenv
+import jose
 import jwt
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
@@ -47,7 +48,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
 
         return User(**user)
 
-    except jwt.PyJWTError:
+    except jose.exceptions.ExpiredSignatureError:
         raise HTTPException(
             status_code=401, detail="Invalid authentication credentials"
         )
