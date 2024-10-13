@@ -31,6 +31,7 @@ async def get_all_lessons():
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_lesson(lesson: Lesson):
     """Create a new lesson in the database"""
+    lesson.category = lesson.category.title()
 
     lesson_collection.insert_one(lesson.dict(by_alias=True))
     new_lesson = lesson_collection.find_one({"_id": lesson.id})
