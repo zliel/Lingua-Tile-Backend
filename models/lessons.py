@@ -22,6 +22,14 @@ class Lesson(BaseModel):
             return None
         return v
 
+    @validator("category", pre=True, always=True)
+    def validate_category(cls, v):
+        if v.lower() not in ["grammar", "vocabulary", "kanji"]:
+            raise ValueError(
+                "Category must be one of 'grammar', 'vocabulary', or 'kanji'"
+            )
+        return v.lower()
+
     class Config:
         arbitrary_types_allowed = True
         allow_population_by_field_name = True
