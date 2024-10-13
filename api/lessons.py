@@ -49,6 +49,21 @@ async def create_lesson(lesson: Lesson):
     return lesson
 
 
+@router.get("/by-category/{category}")
+async def get_lessons_by_category(category: str):
+    """Retrieve all lessons from the database by category"""
+    if category not in ["grammar", "vocabulary", "kanji"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Category must be one of 'grammar', 'vocabulary', or 'kanji'",
+        )
+    lessons = lesson_collection.find({"category": category})
+
+    return [Lesson(**lesson) for lesson in lessons] or HTTPException(
+        status_code=404, detail=f"No lessons found for category {category}"
+    )
+
+
 @router.get("/{lesson_id}")
 async def get_lesson(lesson_id: PyObjectId):
     """Retrieve a lesson from the database by id"""

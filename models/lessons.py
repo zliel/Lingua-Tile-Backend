@@ -10,7 +10,9 @@ class Lesson(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     title: str = Field(...)
     section_id: Optional[PyObjectId] = Field(default=None)
-    card_ids: List[PyObjectId] = Field(default=[])
+    card_ids: Optional[List[PyObjectId]] = Field(default=[])
+    content: Optional[str] = Field(default="")  # This will be markdown content
+    category: str = Field(...)
 
     @validator("section_id", pre=True, always=True)
     def validate_section_id(cls, v):
@@ -27,5 +29,9 @@ class Lesson(BaseModel):
                 "title": "Basic Grammar",
                 "section_id": "5f9f1b9b9c9d1c0b8c8b9c9d",
                 "card_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"],
+                "content": "#This is some markdown content for a lesson on basic grammar in Japanese #"
+                "##This is a subheading"
+                "This is some more content",
+                "category": "grammar",  # This could be grammar, vocabulary, or kanji
             }
         }
