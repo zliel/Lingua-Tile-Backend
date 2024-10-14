@@ -1,13 +1,13 @@
 import os
 from typing import List
 
-import dotenv
 from dotenv import load_dotenv
 from fastapi import APIRouter, status, HTTPException
 from pymongo import MongoClient
 
 from models import PyObjectId
 from models.lessons import Lesson
+from models.sentences import Sentence
 from models.update_lesson import UpdateLesson
 
 load_dotenv(".env")
@@ -31,6 +31,18 @@ async def get_all_lessons():
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_lesson(lesson: Lesson):
     """Create a new lesson in the database"""
+    # Ensure the category is title case
+    lesson.category = lesson.category.title()
+
+    # Convert the JSON sentences to Sentence objects
+    if lesson.sentences is not None:
+        lesson.sentences = [
+            Sentence.create(
+                full_sentence=sentence.full_sentence,
+                possible_answers=sentence.possible_answers,
+            )
+            for sentence in lesson.sentences
+        ]
 
     lesson_collection.insert_one(lesson.dict(by_alias=True))
     new_lesson = lesson_collection.find_one({"_id": lesson.id})
@@ -52,12 +64,14 @@ async def create_lesson(lesson: Lesson):
 @router.get("/by-category/{category}")
 async def get_lessons_by_category(category: str):
     """Retrieve all lessons from the database by category"""
-    if category not in ["grammar", "vocabulary", "kanji"]:
+    if category.lower() not in ["grammar", "vocabulary", "kanji"]:
         raise HTTPException(
             status_code=400,
             detail="Category must be one of 'grammar', 'vocabulary', or 'kanji'",
         )
-    lessons = lesson_collection.find({"category": category})
+    lessons = lesson_collection.find(
+        {"category": {"$regex": f"^{category}", "$options": "i"}}
+    )
 
     return [Lesson(**lesson) for lesson in lessons] or HTTPException(
         status_code=404, detail=f"No lessons found for category {category}"

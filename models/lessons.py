@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 from pydantic import BaseModel, Field, validator
 
 from .py_object_id import PyObjectId
+from .sentences import Sentence
 
 
 class Lesson(BaseModel):
@@ -12,6 +13,7 @@ class Lesson(BaseModel):
     section_id: Optional[PyObjectId] = Field(default=None)
     card_ids: Optional[List[PyObjectId]] = Field(default=[])
     content: Optional[str] = Field(default="")  # This will be markdown content
+    sentences: Optional[List[Sentence]] = Field(default=[])
     category: str = Field(...)
 
     @validator("section_id", pre=True, always=True)
@@ -19,6 +21,14 @@ class Lesson(BaseModel):
         if v == "":
             return None
         return v
+
+    @validator("category", pre=True, always=True)
+    def validate_category(cls, v):
+        if v.lower() not in ["grammar", "vocabulary", "kanji"]:
+            raise ValueError(
+                "Category must be one of 'grammar', 'vocabulary', or 'kanji'"
+            )
+        return v.lower()
 
     class Config:
         arbitrary_types_allowed = True
@@ -33,5 +43,12 @@ class Lesson(BaseModel):
                 "##This is a subheading"
                 "This is some more content",
                 "category": "grammar",  # This could be grammar, vocabulary, or kanji
+                "sentences": [
+                    {
+                        "full_sentence": "これはペンです",
+                        "possible_answers": ["This is a pen"],
+                        "words": ["これ", "は", "ペン", "です"],
+                    }
+                ],
             }
         }
