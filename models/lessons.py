@@ -24,9 +24,9 @@ class Lesson(BaseModel):
 
     @validator("category", pre=True, always=True)
     def validate_category(cls, v):
-        if v.lower() not in ["grammar", "vocabulary", "kanji"]:
+        if v.lower() not in ["grammar", "practice", "flashcards"]:
             raise ValueError(
-                "Category must be one of 'grammar', 'vocabulary', or 'kanji'"
+                "Category must be one of 'grammar', 'practice', or 'flashcards'"
             )
         return v.lower()
 
