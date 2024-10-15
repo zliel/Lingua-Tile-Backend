@@ -28,13 +28,30 @@ async def get_all_lessons():
     return [Lesson(**lesson) for lesson in lessons]
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_lesson(lesson: Lesson):
-    """Create a new lesson in the database"""
-    # Ensure the category is title case
-    lesson.category = lesson.category.title()
+def handle_grammar_lessons(lesson: Lesson) -> None:
+    """Handle grammar lessons"""
+    lesson.sentences = None
+    lesson.card_ids = None
 
-    # Convert the JSON sentences to Sentence objects
+    lesson.content = lesson.content.replace("\n", "<br>")
+    # If the first line isn't <base> to open links in a new tab, add it
+    if not lesson.content.startswith("<base>"):
+        lesson.content = '<base target="_blank">' + lesson.content
+
+
+def handle_flashcards_category(lesson: Lesson) -> None:
+    lesson.content = None
+    lesson.sentences = None
+
+    if lesson.card_ids is None:
+        lesson.card_ids = []
+    else:
+        lesson.card_ids = [PyObjectId(card_id) for card_id in lesson.card_ids]
+
+
+def handle_practice_category(lesson: Lesson) -> None:
+    lesson.content = None
+    lesson.card_ids = None
     if lesson.sentences is not None:
         lesson.sentences = [
             Sentence.create(
@@ -44,16 +61,27 @@ async def create_lesson(lesson: Lesson):
             for sentence in lesson.sentences
         ]
 
-    if lesson.content is not None:
-        lesson.content = lesson.content.replace("\n", "<br>")
-        # If the first line isn't <base> to open links in a new tab, add it
-        if not lesson.content.startswith("<base>"):
-            lesson.content = '<base target="_blank">' + lesson.content
+
+@router.post("/create", status_code=status.HTTP_201_CREATED)
+async def create_lesson(lesson: Lesson):
+    """Create a new lesson in the database"""
+    # Ensure the category is title case
+    lesson.category = lesson.category.title()
+
+    # Handle each category's specific requirements
+    if lesson.category == "Grammar" and lesson.content:
+        handle_grammar_lessons(lesson)
+    elif lesson.category == "Flashcards":
+        handle_flashcards_category(lesson)
+        lesson.content = None
+    elif lesson.category == "Practice":
+        handle_practice_category(lesson)
 
     lesson_collection.insert_one(lesson.dict(by_alias=True))
     new_lesson = lesson_collection.find_one({"_id": lesson.id})
+
     # Update the cards that are in the lesson
-    if new_lesson["card_ids"] is not None:
+    if new_lesson["card_ids"]:
         for card_id in new_lesson["card_ids"]:
             card_collection.find_one_and_update(
                 {"_id": card_id}, {"$addToSet": {"lesson_id": new_lesson["_id"]}}
