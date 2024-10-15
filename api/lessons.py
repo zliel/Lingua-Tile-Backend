@@ -44,6 +44,12 @@ async def create_lesson(lesson: Lesson):
             for sentence in lesson.sentences
         ]
 
+    if lesson.content is not None:
+        lesson.content = lesson.content.replace("\n", "<br>")
+        # If the first line isn't <base> to open links in a new tab, add it
+        if not lesson.content.startswith("<base>"):
+            lesson.content = '<base target="_blank">' + lesson.content
+
     lesson_collection.insert_one(lesson.dict(by_alias=True))
     new_lesson = lesson_collection.find_one({"_id": lesson.id})
     # Update the cards that are in the lesson
