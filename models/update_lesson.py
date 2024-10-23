@@ -9,6 +9,9 @@ from .py_object_id import PyObjectId
 class UpdateLesson(BaseModel):
     title: Optional[str] = None
     section_id: Optional[PyObjectId] = None
+    category: Optional[str] = None
+    content: Optional[str] = None
+    sentences: Optional[List[dict]] = None
     card_ids: Optional[List[PyObjectId]] = None
 
     @validator("section_id", pre=True, always=True)
@@ -24,6 +27,9 @@ class UpdateLesson(BaseModel):
             "example": {
                 "title": "Hello",
                 "section_id": "5f9f1b9b9c9d1c0b8c8b9c9d",
-                "card_ids": ["5f9f1b9b9c9d1c0b8c8b9c9d"],
+                "category": "grammar",
+                "content": "# This is a lesson on basic grammar in Japanese in markdown format",
+                "card_ids": [],
+                "sentences": [],
             }
         }
