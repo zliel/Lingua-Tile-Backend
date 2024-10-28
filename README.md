@@ -1,4 +1,6 @@
 # Lingua Tile API
+[![Deploy to Google Cloud Run](https://github.com/zliel/Lingua-Tile-Backend/actions/workflows/cicd.yml/badge.svg)](https://github.com/zliel/Lingua-Tile-Backend/actions/workflows/cicd.yml)
+
 A simple, easy to use API for creating flashcards. This API is designed for use with the [Lingua Tile Frontend](https://github.com/zliel/lingua-tile), but is flexible enough be used for any flashcard application.
 It makes use of a Lesson/Deck structure, and can be used to create courses, or just individual decks.
 
