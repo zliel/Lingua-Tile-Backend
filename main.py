@@ -33,7 +33,7 @@ app.add_middleware(
 
 @app.get("/", tags=["Root"])
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Hello World!"}
 
 
 @app.exception_handler(RequestValidationError)
