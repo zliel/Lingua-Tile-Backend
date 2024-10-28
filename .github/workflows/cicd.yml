@@ -74,11 +74,11 @@ jobs:
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: ${{ secrets.GCP_PROJECT_ID }}
+          service: linguatile-backend
           image: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/backend-container/linguatile-backend
           region: us-central1
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          flags: --platform managed --allow-unauthenticated
+          flags: --platform=managed --allow-unauthenticated
 
       - name: Test the deployed service
         run: |
