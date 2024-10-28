@@ -35,7 +35,7 @@ jobs:
           docker build -t linguatile-backend .
 
       - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
@@ -57,7 +57,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v2
         with:
           credentials: ${{ secrets.GCP_SA_KEY }}
 
@@ -68,12 +68,14 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
 
       - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ secrets.GCP_PROJECT_ID }}
+          image: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/linguatile-backend
+          region: us-central1
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          flags: --platform managed --allow-unauthenticated
+
+      - name: Test the deployed service
         run: |
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-          gcloud run deploy linguatile-backend \
-            --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/linguatile-backend \
-            --platform managed \
-            --region us-central1 \
-            --allow-unauthenticated
-          
-          
+          curl ${{ steps.deploy.outputs.url }}  
