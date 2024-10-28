@@ -1,11 +1,6 @@
 name: Deploy to Google Cloud Run
 on:
-  # For now it'll run for every push and pull request to the main branch
-  # For testing purposes ONLY
   push:
-    branches:
-      - main
-  pull_request:
     branches:
       - main
 
