@@ -3,9 +3,11 @@ from typing import List
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, status, HTTPException, Request
+from fastapi.params import Depends
 from pymongo import MongoClient
 
-from models import PyObjectId
+from api.dependencies import get_current_user
+from models import PyObjectId, User
 from models.lesson_review import LessonReview
 from models.lessons import Lesson
 from models.sentences import Sentence
@@ -195,11 +197,11 @@ async def review_lesson(request: Request):
         )
 
 
-@router.get("/reviews/{user_id}", status_code=status.HTTP_200_OK)
-async def get_lesson_reviews(user_id: PyObjectId):
-    user = user_collection.find_one({"_id": user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+@router.get("/reviews", status_code=status.HTTP_200_OK)
+async def get_lesson_reviews(current_user: User = Depends(get_current_user)):
+    user_id = current_user.id
+    if not user_id:
+        raise HTTPException(status_code=404, detail=f"User not found")
 
     lesson_reviews = lesson_review_collection.find({"user_id": user_id})
     return [LessonReview(**lesson_review) for lesson_review in lesson_reviews]
