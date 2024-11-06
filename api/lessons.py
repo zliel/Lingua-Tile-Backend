@@ -1,14 +1,18 @@
 import os
+from datetime import datetime
 from typing import List
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Request
 from pymongo import MongoClient
+
 
 from models import PyObjectId
 from models.lessons import Lesson
 from models.sentences import Sentence
+from models.users import User
 from models.update_lesson import UpdateLesson
+from models.lesson_review import LessonReview
 
 load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
@@ -18,6 +22,42 @@ db = client["lingua-tile"]
 lesson_collection = db["lessons"]
 card_collection = db["cards"]
 section_collection = db["sections"]
+user_collection = db["users"]
+lesson_review_collection = db["lesson_reviews"]
+
+
+@router.post("/testing", status_code=status.HTTP_200_OK)
+async def test(request: Request):
+    # Access the "lesson_id" and "user_id" from the request body
+    body = await request.json()
+    lesson_id = body["lesson_id"]
+    user_id = body["user_id"]
+
+    lesson = lesson_collection.find_one({"_id": PyObjectId(lesson_id)})
+    print(lesson["next_review"])
+    user = user_collection.find_one({"_id": PyObjectId(user_id)})
+    lesson_review = lesson_review_collection.find_one(
+        {"lesson_id": lesson["_id"], "user_id": user["_id"]}
+    )
+    if not lesson_review:
+        print("Creating new lesson review")
+        lesson_review = LessonReview(lesson_id=lesson["_id"], user_id=user["_id"])
+        # Review the lesson with a "Rating.Good" rating
+        lesson["next_review"] = lesson_review.review(0.7)
+        lesson_review_collection.insert_one(lesson_review.dict(by_alias=True))
+    else:
+        print("Updating existing lesson review")
+        lesson_review = LessonReview(**lesson_review)
+        lesson["next_review"] = lesson_review.review(0.7)
+        lesson_review_collection.find_one_and_update(
+            {
+                "lesson_id": lesson["_id"],
+                "user_id": user["_id"],
+            },
+            {"$set": lesson_review.dict(by_alias=True)},
+        )
+    print(lesson["next_review"])
+    lesson_collection.update_one({"_id": lesson["_id"]}, {"$set": lesson})
 
 
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
