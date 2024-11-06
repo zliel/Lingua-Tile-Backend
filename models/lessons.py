@@ -16,7 +16,6 @@ class Lesson(BaseModel):
     content: Optional[str] = Field(default="")  # This will be markdown content
     sentences: Optional[List[Sentence]] = Field(default=[])
     category: str = Field(...)
-    next_review: datetime = Field(default_factory=lambda: datetime.now())
 
     @validator("section_id", pre=True, always=True)
     def validate_section_id(cls, v):
