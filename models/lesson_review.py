@@ -1,9 +1,9 @@
 from datetime import datetime, timezone, timedelta
 from sched import scheduler
 
+from bson import ObjectId
 from fsrs import FSRS, Card, Rating
 from pydantic import BaseModel, Field, validator
-from typing_extensions import override
 
 from .py_object_id import PyObjectId  # Assuming this is defined elsewhere
 
@@ -12,6 +12,7 @@ fsrs_scheduler = FSRS()
 
 
 class LessonReview(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     lesson_id: PyObjectId = Field(...)
     user_id: PyObjectId = Field(...)
 
@@ -54,6 +55,7 @@ class LessonReview(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         allow_population_by_field_name = True
+        json_encoders = {ObjectId: lambda oid: str(oid)}
         schema_extra = {
             "example": {
                 "lesson_id": "5f9f1b9b9c9d1c0b8c8b9c9d",
