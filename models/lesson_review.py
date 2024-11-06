@@ -7,10 +7,7 @@ from typing_extensions import override
 
 from .py_object_id import PyObjectId  # Assuming this is defined elsewhere
 
-
-# OKAY, so the review setup works now, now I need to figure out storing it in the database and make
-# sure it works with a predefined lesson's next_review field
-
+# Initialize the scheduler
 fsrs_scheduler = FSRS()
 
 
@@ -61,6 +58,7 @@ class LessonReview(BaseModel):
             "example": {
                 "lesson_id": "5f9f1b9b9c9d1c0b8c8b9c9d",
                 "rating": "Rating.Again",
+                "card_object": Card().to_dict(),
                 "next_review": datetime.now(timezone.utc),
             }
         }
