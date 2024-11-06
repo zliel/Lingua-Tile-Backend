@@ -1,18 +1,15 @@
 import os
-from datetime import datetime
 from typing import List
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, status, HTTPException, Request
 from pymongo import MongoClient
 
-
 from models import PyObjectId
+from models.lesson_review import LessonReview
 from models.lessons import Lesson
 from models.sentences import Sentence
-from models.users import User
 from models.update_lesson import UpdateLesson
-from models.lesson_review import LessonReview
 
 load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
@@ -24,6 +21,7 @@ card_collection = db["cards"]
 section_collection = db["sections"]
 user_collection = db["users"]
 lesson_review_collection = db["lesson_reviews"]
+
 
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
 async def get_all_lessons():
@@ -167,8 +165,14 @@ async def review_lesson(request: Request):
     overall_performance = body["overall_performance"]
 
     lesson = lesson_collection.find_one({"_id": PyObjectId(lesson_id)})
+    if not lesson:
+        raise HTTPException(
+            status_code=404, detail=f"Lesson with id {lesson_id} not found"
+        )
 
     user = user_collection.find_one({"_id": PyObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
     lesson_review = lesson_review_collection.find_one(
         {"lesson_id": lesson["_id"], "user_id": user["_id"]}
     )
@@ -176,12 +180,12 @@ async def review_lesson(request: Request):
     # If the lesson review does not exist, create a new one
     if not lesson_review:
         lesson_review = LessonReview(lesson_id=lesson["_id"], user_id=user["_id"])
-        # Review the lesson with a "Rating.Good" rating
-        lesson["next_review"] = lesson_review.review(overall_performance)
+        lesson_review.review(overall_performance)
         lesson_review_collection.insert_one(lesson_review.dict(by_alias=True))
+
     else:  # Otherwise update the existing one
         lesson_review = LessonReview(**lesson_review)
-        lesson["next_review"] = lesson_review.review(overall_performance)
+        lesson_review.review(overall_performance)
         lesson_review_collection.find_one_and_update(
             {
                 "lesson_id": lesson["_id"],
@@ -189,6 +193,3 @@ async def review_lesson(request: Request):
             },
             {"$set": lesson_review.dict(by_alias=True)},
         )
-
-    lesson_collection.update_one({"_id": lesson["_id"]}, {"$set": lesson})
-
