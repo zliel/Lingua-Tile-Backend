@@ -25,41 +25,6 @@ section_collection = db["sections"]
 user_collection = db["users"]
 lesson_review_collection = db["lesson_reviews"]
 
-
-@router.post("/testing", status_code=status.HTTP_200_OK)
-async def test(request: Request):
-    # Access the "lesson_id" and "user_id" from the request body
-    body = await request.json()
-    lesson_id = body["lesson_id"]
-    user_id = body["user_id"]
-
-    lesson = lesson_collection.find_one({"_id": PyObjectId(lesson_id)})
-    print(lesson["next_review"])
-    user = user_collection.find_one({"_id": PyObjectId(user_id)})
-    lesson_review = lesson_review_collection.find_one(
-        {"lesson_id": lesson["_id"], "user_id": user["_id"]}
-    )
-    if not lesson_review:
-        print("Creating new lesson review")
-        lesson_review = LessonReview(lesson_id=lesson["_id"], user_id=user["_id"])
-        # Review the lesson with a "Rating.Good" rating
-        lesson["next_review"] = lesson_review.review(0.7)
-        lesson_review_collection.insert_one(lesson_review.dict(by_alias=True))
-    else:
-        print("Updating existing lesson review")
-        lesson_review = LessonReview(**lesson_review)
-        lesson["next_review"] = lesson_review.review(0.7)
-        lesson_review_collection.find_one_and_update(
-            {
-                "lesson_id": lesson["_id"],
-                "user_id": user["_id"],
-            },
-            {"$set": lesson_review.dict(by_alias=True)},
-        )
-    print(lesson["next_review"])
-    lesson_collection.update_one({"_id": lesson["_id"]}, {"$set": lesson})
-
-
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
 async def get_all_lessons():
     """Retrieve all lessons from the database"""
@@ -190,3 +155,40 @@ async def delete_lesson(lesson_id: PyObjectId):
     section_collection.update_one(
         {"lesson_ids": lesson_id}, {"$pull": {"lesson_ids": lesson_id}}
     )
+
+
+# Lesson Review Routes
+@router.post("/review", status_code=status.HTTP_200_OK)
+async def review_lesson(request: Request):
+    # Access the "lesson_id" and "user_id" from the request body
+    body = await request.json()
+    lesson_id = body["lesson_id"]
+    user_id = body["user_id"]
+    overall_performance = body["overall_performance"]
+
+    lesson = lesson_collection.find_one({"_id": PyObjectId(lesson_id)})
+
+    user = user_collection.find_one({"_id": PyObjectId(user_id)})
+    lesson_review = lesson_review_collection.find_one(
+        {"lesson_id": lesson["_id"], "user_id": user["_id"]}
+    )
+
+    # If the lesson review does not exist, create a new one
+    if not lesson_review:
+        lesson_review = LessonReview(lesson_id=lesson["_id"], user_id=user["_id"])
+        # Review the lesson with a "Rating.Good" rating
+        lesson["next_review"] = lesson_review.review(overall_performance)
+        lesson_review_collection.insert_one(lesson_review.dict(by_alias=True))
+    else:  # Otherwise update the existing one
+        lesson_review = LessonReview(**lesson_review)
+        lesson["next_review"] = lesson_review.review(overall_performance)
+        lesson_review_collection.find_one_and_update(
+            {
+                "lesson_id": lesson["_id"],
+                "user_id": user["_id"],
+            },
+            {"$set": lesson_review.dict(by_alias=True)},
+        )
+
+    lesson_collection.update_one({"_id": lesson["_id"]}, {"$set": lesson})
+
