@@ -193,3 +193,13 @@ async def review_lesson(request: Request):
             },
             {"$set": lesson_review.dict(by_alias=True)},
         )
+
+
+@router.get("/reviews/{user_id}", status_code=status.HTTP_200_OK)
+async def get_lesson_reviews(user_id: PyObjectId):
+    user = user_collection.find_one({"_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+
+    lesson_reviews = lesson_review_collection.find({"user_id": user_id})
+    return [LessonReview(**lesson_review) for lesson_review in lesson_reviews]
