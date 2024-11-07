@@ -175,11 +175,13 @@ async def delete_lesson(lesson_id: PyObjectId):
 
 # Lesson Review Routes
 @router.post("/review", status_code=status.HTTP_200_OK)
-async def review_lesson(request: Request):
+async def review_lesson(
+    request: Request, current_user: User = Depends(get_current_user)
+):
     # Access the "lesson_id" and "user_id" from the request body
     body = await request.json()
     lesson_id = body["lesson_id"]
-    user_id = body["user_id"]
+    user_id = current_user.id
     overall_performance = body["overall_performance"]
 
     lesson = lesson_collection.find_one({"_id": PyObjectId(lesson_id)})
