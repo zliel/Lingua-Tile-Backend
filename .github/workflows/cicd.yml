@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'README.md'
+      - '.github/**'
+      - '.gitignore'
 
 jobs:
   # Set up python environment and build the Docker image
