@@ -55,7 +55,7 @@ async def create_lesson(lesson: Lesson):
     if new_lesson["card_ids"] is not None:
         for card_id in new_lesson["card_ids"]:
             card_collection.find_one_and_update(
-                {"_id": card_id}, {"$addToSet": {"lesson_id": new_lesson["_id"]}}
+                {"_id": card_id}, {"$addToSet": {"lesson_ids": new_lesson["_id"]}}
             )
 
     if new_lesson["section_id"] is not None:
