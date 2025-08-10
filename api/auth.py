@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 
-def create_access_token(data: dict, expires_delta: timedelta = None):
+def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta

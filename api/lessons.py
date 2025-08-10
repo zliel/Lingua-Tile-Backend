@@ -77,9 +77,7 @@ async def get_lessons_by_category(category: str):
         {"category": {"$regex": f"^{category}", "$options": "i"}}
     )
 
-    return [Lesson(**lesson) for lesson in lessons] or HTTPException(
-        status_code=404, detail=f"No lessons found for category {category}"
-    )
+    return [Lesson(**lesson) for lesson in lessons]
 
 
 @router.get("/reviews", status_code=status.HTTP_200_OK)

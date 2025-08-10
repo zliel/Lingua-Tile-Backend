@@ -25,11 +25,14 @@ def get_db():
     return db
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) -> User:
     try:
         # Decode the token to get the username
+        if not SECRET_KEY:
+            raise HTTPException(status_code=500, detail="Server configuration error")
+
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        username = payload.get("sub")
 
         if username is None:
             raise HTTPException(
