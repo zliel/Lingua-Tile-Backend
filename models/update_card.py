@@ -12,8 +12,8 @@ class UpdateCard(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "front_text": "Hello",
                 "back_text": "こんにちは",

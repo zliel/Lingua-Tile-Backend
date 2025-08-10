@@ -1,8 +1,7 @@
-from datetime import datetime
 from typing import List, Optional
 
 from bson.objectid import ObjectId
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .py_object_id import PyObjectId
 from .sentences import Sentence
@@ -17,13 +16,13 @@ class Lesson(BaseModel):
     sentences: Optional[List[Sentence]] = Field(default=[])
     category: str = Field(...)
 
-    @validator("section_id", pre=True, always=True)
+    @field_validator("section_id")
     def validate_section_id(cls, v):
         if v == "":
             return None
         return v
 
-    @validator("category", pre=True, always=True)
+    @field_validator("category")
     def validate_category(cls, v):
         if v.lower() not in ["grammar", "practice", "flashcards"]:
             raise ValueError(
@@ -33,9 +32,9 @@ class Lesson(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        allow_population_by_field_name = True
+        validate_by_name = True
         json_encoders = {ObjectId: lambda oid: str(oid)}
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "Basic Grammar",
                 "section_id": "5f9f1b9b9c9d1c0b8c8b9c9d",

@@ -18,9 +18,9 @@ class User(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        allow_population_by_field_name = True
+        validate_by_name = True
         json_encoders = {ObjectId: lambda oid: str(oid)}
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "username": "johndoe",
                 "password": "password",

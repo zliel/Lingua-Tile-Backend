@@ -1,14 +1,13 @@
 from datetime import datetime, timezone, timedelta
-from sched import scheduler
 
 from bson import ObjectId
-from fsrs import FSRS, Card, Rating
-from pydantic import BaseModel, Field, validator
+from fsrs import Card, Rating, Scheduler
+from pydantic import BaseModel, Field, field_validator
 
 from .py_object_id import PyObjectId  # Assuming this is defined elsewhere
 
 # Initialize the scheduler
-fsrs_scheduler = FSRS()
+fsrs_scheduler = Scheduler()
 
 
 class LessonReview(BaseModel):
@@ -21,7 +20,7 @@ class LessonReview(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=1)
     )  # Set initial due date
 
-    @validator("lesson_id")
+    @field_validator("lesson_id")
     def validate_lesson_id(cls, v):
         # You can add validation logic here if needed
         return v
@@ -39,24 +38,24 @@ class LessonReview(BaseModel):
             rating = Rating.Again
 
         # Convert the card dictionary from db to a Card object
-        self.card_object: Card = Card.from_dict(self.card_object)
-        self.card_object: Card = fsrs_scheduler.review_card(
-            self.card_object, rating, datetime.now(timezone.utc)
+        card = Card.from_dict(self.card_object)
+        reviewed_card: Card = fsrs_scheduler.review_card(
+            card, rating, datetime.now(timezone.utc)
         )[0]
 
         # Update the next review date
-        self.next_review = self.card_object.due
+        self.next_review = reviewed_card.due
 
         # Convert the card object back to a dictionary
-        self.card_object: dict = self.card_object.to_dict()
+        self.card_object: dict = reviewed_card.to_dict()
 
         return self.next_review
 
     class Config:
         arbitrary_types_allowed = True
-        allow_population_by_field_name = True
+        validate_by_name = True
         json_encoders = {ObjectId: lambda oid: str(oid)}
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "lesson_id": "5f9f1b9b9c9d1c0b8c8b9c9d",
                 "rating": "Rating.Again",

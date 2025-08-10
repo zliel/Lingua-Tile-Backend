@@ -2,8 +2,7 @@ import os
 from typing import List
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, status, HTTPException, Request
-from fastapi.params import Depends
+from fastapi import Depends, APIRouter, status, HTTPException, Request
 from pymongo import MongoClient
 
 from api.dependencies import get_current_user
@@ -30,7 +29,7 @@ async def get_all_lessons():
     """Retrieve all lessons from the database"""
     lessons = lesson_collection.find()
 
-    return [Lesson(**lesson) for lesson in lessons]
+    return [Lesson(**lesson) for lesson in lessons.to_list()]
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
@@ -49,16 +48,16 @@ async def create_lesson(lesson: Lesson):
             for sentence in lesson.sentences
         ]
 
-    lesson_collection.insert_one(lesson.dict(by_alias=True))
+    lesson_collection.insert_one(lesson.model_dump(by_alias=True))
     new_lesson = lesson_collection.find_one({"_id": lesson.id})
     # Update the cards that are in the lesson
-    if new_lesson["card_ids"] is not None:
+    if new_lesson and new_lesson["card_ids"] is not None:
         for card_id in new_lesson["card_ids"]:
             card_collection.find_one_and_update(
                 {"_id": card_id}, {"$addToSet": {"lesson_ids": new_lesson["_id"]}}
             )
 
-    if new_lesson["section_id"] is not None:
+    if new_lesson and new_lesson["section_id"] is not None:
         section_collection.find_one_and_update(
             {"_id": new_lesson["section_id"]},
             {"$addToSet": {"lesson_ids": new_lesson["_id"]}},

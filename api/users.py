@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 
-from api.dependencies import get_db, get_current_user, pwd_context
+from api.dependencies import get_db, get_current_user as get_client, pwd_context
 from models import User, PyObjectId, UpdateUser
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
@@ -25,7 +25,7 @@ async def create_user(user: User, db=Depends(get_db)):
 
 
 @router.get("/", response_model=User, response_model_exclude={"password"})
-async def get_current_user(current_user: User = Depends(get_current_user)):
+async def get_current_user(current_user: User = Depends(get_client)):
     """Retrieve the current user"""
     if current_user is None:
         raise HTTPException(
