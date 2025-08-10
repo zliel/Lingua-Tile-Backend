@@ -107,7 +107,7 @@ async def get_lesson(lesson_id: PyObjectId):
 async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     """Update a lesson in the database by id"""
     lesson_info_to_update = {
-        k: v for k, v in updated_info.dict().items() if v is not None
+        k: v for k, v in updated_info.model_dump().items() if v is not None
     }
     if not updated_info.section_id:
         lesson_info_to_update["section_id"] = None
@@ -198,7 +198,7 @@ async def review_lesson(
     if not lesson_review:
         lesson_review = LessonReview(lesson_id=lesson["_id"], user_id=user["_id"])
         lesson_review.review(overall_performance)
-        lesson_review_collection.insert_one(lesson_review.dict(by_alias=True))
+        lesson_review_collection.insert_one(lesson_review.model_dump(by_alias=True))
 
     else:  # Otherwise update the existing one
         lesson_review = LessonReview(**lesson_review)
@@ -208,5 +208,5 @@ async def review_lesson(
                 "lesson_id": lesson["_id"],
                 "user_id": user["_id"],
             },
-            {"$set": lesson_review.dict(by_alias=True)},
+            {"$set": lesson_review.model_dump(by_alias=True)},
         )
