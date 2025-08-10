@@ -100,7 +100,13 @@ async def get_lesson_reviews(current_user: User = Depends(get_current_user)):
 async def get_lesson(lesson_id: PyObjectId):
     """Retrieve a lesson from the database by id"""
     lesson = lesson_collection.find_one({"_id": lesson_id})
-    return Lesson(**lesson)
+    return (
+        Lesson(**lesson)
+        if lesson
+        else HTTPException(
+            status_code=404, detail=f"Lesson with id {lesson_id} not found"
+        )
+    )
 
 
 @router.put("/update/{lesson_id}")
@@ -123,6 +129,10 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
 
     # update a lesson in the database by id
     updated_lesson = lesson_collection.find_one({"_id": lesson_id})
+    if updated_lesson is None:
+        raise HTTPException(
+            status_code=404, detail=f"Lesson with id {lesson_id} failed to update"
+        )
 
     # if a card was in the old lesson but not the new lesson, remove the lesson id from the card
     if old_lesson["card_ids"]:
