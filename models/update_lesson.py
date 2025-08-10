@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from .py_object_id import PyObjectId
 
@@ -14,7 +14,7 @@ class UpdateLesson(BaseModel):
     sentences: Optional[List[dict]] = None
     card_ids: Optional[List[PyObjectId]] = None
 
-    @validator("section_id", pre=True, always=True)
+    @field_validator("section_id")
     def validate_section_id(cls, v):
         if v == "":
             return None
@@ -22,8 +22,8 @@ class UpdateLesson(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "title": "Hello",
                 "section_id": "5f9f1b9b9c9d1c0b8c8b9c9d",

@@ -30,7 +30,7 @@ async def create_card(
     lesson_collection = db["lessons"]
 
     # If we don't encode the card, we run into a problem where the card id is not a string
-    card_collection.insert_one(card.dict(by_alias=True))
+    card_collection.insert_one(card.model_dump(by_alias=True))
     new_card = card_collection.find_one({"_id": card.id})
 
     # Update the lessons that the card is in
@@ -71,7 +71,7 @@ async def update_card(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     card_info_to_update = {
-        k: v for k, v in updated_info.dict().items() if v is not None
+        k: v for k, v in updated_info.model_dump().items() if v is not None
     }
 
     card_collection = db["cards"]

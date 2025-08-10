@@ -2,8 +2,7 @@ import os
 from typing import List
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, status, HTTPException, Request
-from fastapi.params import Depends
+from fastapi import Depends, APIRouter, status, HTTPException, Request
 from pymongo import MongoClient
 
 from api.dependencies import get_current_user
@@ -30,7 +29,7 @@ async def get_all_lessons():
     """Retrieve all lessons from the database"""
     lessons = lesson_collection.find()
 
-    return [Lesson(**lesson) for lesson in lessons]
+    return [Lesson(**lesson) for lesson in lessons.to_list()]
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
@@ -49,16 +48,16 @@ async def create_lesson(lesson: Lesson):
             for sentence in lesson.sentences
         ]
 
-    lesson_collection.insert_one(lesson.dict(by_alias=True))
+    lesson_collection.insert_one(lesson.model_dump(by_alias=True))
     new_lesson = lesson_collection.find_one({"_id": lesson.id})
     # Update the cards that are in the lesson
-    if new_lesson["card_ids"] is not None:
+    if new_lesson and new_lesson["card_ids"] is not None:
         for card_id in new_lesson["card_ids"]:
             card_collection.find_one_and_update(
                 {"_id": card_id}, {"$addToSet": {"lesson_ids": new_lesson["_id"]}}
             )
 
-    if new_lesson["section_id"] is not None:
+    if new_lesson and new_lesson["section_id"] is not None:
         section_collection.find_one_and_update(
             {"_id": new_lesson["section_id"]},
             {"$addToSet": {"lesson_ids": new_lesson["_id"]}},
@@ -78,22 +77,17 @@ async def get_lessons_by_category(category: str):
         {"category": {"$regex": f"^{category}", "$options": "i"}}
     )
 
-    return [Lesson(**lesson) for lesson in lessons] or HTTPException(
-        status_code=404, detail=f"No lessons found for category {category}"
-    )
+    return [Lesson(**lesson) for lesson in lessons]
 
 
 @router.get("/reviews", status_code=status.HTTP_200_OK)
 async def get_lesson_reviews(current_user: User = Depends(get_current_user)):
     """Retrieve all lesson reviews from the database"""
-    print(current_user)
     user_id = current_user.id
-    print(user_id)
     if not user_id:
-        raise HTTPException(status_code=404, detail=f"User not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
     lesson_reviews = lesson_review_collection.find({"user_id": user_id})
-    print(lesson_reviews)
     if not lesson_reviews:
         return []
     return [LessonReview(**lesson_review) for lesson_review in lesson_reviews]
@@ -103,14 +97,20 @@ async def get_lesson_reviews(current_user: User = Depends(get_current_user)):
 async def get_lesson(lesson_id: PyObjectId):
     """Retrieve a lesson from the database by id"""
     lesson = lesson_collection.find_one({"_id": lesson_id})
-    return Lesson(**lesson)
+    return (
+        Lesson(**lesson)
+        if lesson
+        else HTTPException(
+            status_code=404, detail=f"Lesson with id {lesson_id} not found"
+        )
+    )
 
 
 @router.put("/update/{lesson_id}")
 async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     """Update a lesson in the database by id"""
     lesson_info_to_update = {
-        k: v for k, v in updated_info.dict().items() if v is not None
+        k: v for k, v in updated_info.model_dump().items() if v is not None
     }
     if not updated_info.section_id:
         lesson_info_to_update["section_id"] = None
@@ -126,6 +126,10 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
 
     # update a lesson in the database by id
     updated_lesson = lesson_collection.find_one({"_id": lesson_id})
+    if updated_lesson is None:
+        raise HTTPException(
+            status_code=404, detail=f"Lesson with id {lesson_id} failed to update"
+        )
 
     # if a card was in the old lesson but not the new lesson, remove the lesson id from the card
     if old_lesson["card_ids"]:
@@ -201,7 +205,7 @@ async def review_lesson(
     if not lesson_review:
         lesson_review = LessonReview(lesson_id=lesson["_id"], user_id=user["_id"])
         lesson_review.review(overall_performance)
-        lesson_review_collection.insert_one(lesson_review.dict(by_alias=True))
+        lesson_review_collection.insert_one(lesson_review.model_dump(by_alias=True))
 
     else:  # Otherwise update the existing one
         lesson_review = LessonReview(**lesson_review)
@@ -211,5 +215,5 @@ async def review_lesson(
                 "lesson_id": lesson["_id"],
                 "user_id": user["_id"],
             },
-            {"$set": lesson_review.dict(by_alias=True)},
+            {"$set": lesson_review.model_dump(by_alias=True)},
         )

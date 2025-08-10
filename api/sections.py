@@ -18,7 +18,7 @@ async def create_section(
     section_collection = db["sections"]
     lesson_collection = db["lessons"]
 
-    section_collection.insert_one(section.dict(by_alias=True))
+    section_collection.insert_one(section.model_dump(by_alias=True))
     new_section = section_collection.find_one({"_id": section.id})
 
     for lesson_id in new_section["lesson_ids"]:
@@ -68,7 +68,7 @@ async def update_section(
     lesson_collection = db["lessons"]
 
     section_info_to_update = {
-        k: v for k, v in updated_info.dict().items() if v is not None
+        k: v for k, v in updated_info.model_dump().items() if v is not None
     }
     old_section = section_collection.find_one_and_update(
         {"_id": section_id}, {"$set": section_info_to_update}
