@@ -6,7 +6,6 @@ from pydantic.json_schema import JsonSchemaValue
 
 
 class PyObjectId(ObjectId):
-
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: GetCoreSchemaHandler
@@ -39,4 +38,4 @@ class PyObjectId(ObjectId):
         return json_schema
 
     def __str__(self) -> str:
-        return str(self)
+        return str(ObjectId(self))
