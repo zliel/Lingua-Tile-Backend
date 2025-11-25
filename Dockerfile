@@ -8,8 +8,7 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 
 # Install the requirements
-RUN pip install -r requirements.txt
-
+RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the files to the working directory
 COPY . .
 
@@ -17,4 +16,4 @@ COPY . .
 EXPOSE 8080
 
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

@@ -1,8 +1,9 @@
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 
 from bson import ObjectId
 from fsrs import Card, Rating, Scheduler
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, field_serializer
 
 from .py_object_id import PyObjectId  # Assuming this is defined elsewhere
 
@@ -11,7 +12,7 @@ fsrs_scheduler = Scheduler()
 
 
 class LessonReview(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     lesson_id: PyObjectId = Field(...)
     user_id: PyObjectId = Field(...)
 
@@ -20,14 +21,22 @@ class LessonReview(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=1)
     )  # Set initial due date
 
-    @field_validator("lesson_id")
-    def validate_lesson_id(cls, v):
-        # You can add validation logic here if needed
-        return v
+    # @field_validator("lesson_id", "user_id", mode="before")
+    # def validate_lesson_id(cls, v):
+    #     if isinstance(v, str):
+    #         if not ObjectId.is_valid(v):
+    #             raise ValueError("Invalid lesson_id or user_id ObjectId")
+    #         return ObjectId(v)
+    #     return v
+    #
+    # @field_serializer("id", "lesson_id", "user_id")
+    # def field_serializer(self, v):
+    #     return str(v) if v is not None else None
 
     def review(self, overall_performance: float):
         """Review the lesson card and update its schedule based on overall performance."""
         rating = Rating.Again  # Default rating
+        # TODO: Switch to a switch statement
         if overall_performance > 0.8:  # Adjust threshold as needed
             rating = Rating.Easy
         elif overall_performance > 0.6:

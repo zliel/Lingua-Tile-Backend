@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import jaconv
 import unicodedata
@@ -55,7 +55,7 @@ def split_sentence(sentence: str) -> List[str]:
 
 
 class Sentence(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: Optional[PyObjectId] = Field(alias="_id", default=str(ObjectId()))
     full_sentence: str = Field(...)
     possible_answers: List[str] = Field(...)
     words: List[str] = Field(default=[])
@@ -66,7 +66,10 @@ class Sentence(BaseModel):
             possible_answers = []
         words = split_sentence(full_sentence)
         return cls(
-            full_sentence=full_sentence, possible_answers=possible_answers, words=words
+            _id=str(ObjectId()),
+            full_sentence=full_sentence,
+            possible_answers=possible_answers,
+            words=words,
         )
 
     class Config:

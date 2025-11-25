@@ -1,3 +1,4 @@
+from bson import ObjectId
 from fastapi import APIRouter, status, HTTPException, Depends
 
 from api.dependencies import get_db, get_current_user as get_client, pwd_context
@@ -15,11 +16,11 @@ async def create_user(user: User, db=Depends(get_db)):
     """Create a new user in the database"""
     user_collection = db["users"]
 
-    if user_collection.find_one({"username": user.username}):
+    if await user_collection.find_one({"username": user.username}):
         raise HTTPException(status_code=400, detail="Username already exists")
 
     user.hash_password()
-    user_collection.insert_one(user.dict(by_alias=True))
+    await user_collection.insert_one(user.model_dump(by_alias=True, exclude={"id"}))
 
     return user
 
@@ -27,10 +28,6 @@ async def create_user(user: User, db=Depends(get_db)):
 @router.get("/", response_model=User, response_model_exclude={"password"})
 async def get_current_user(current_user: User = Depends(get_client)):
     """Retrieve the current user"""
-    if current_user is None:
-        raise HTTPException(
-            status_code=401, detail="Invalid authentication credentials"
-        )
     return current_user
 
 
@@ -46,7 +43,7 @@ async def get_user(
 
     user_collection = db["users"]
 
-    user = user_collection.find_one({"_id": user_id})
+    user = await user_collection.find_one({"_id": ObjectId(user_id)})
     return User(**user)
 
 
@@ -60,16 +57,24 @@ async def get_all_users(
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Not authorized to view all users")
 
-    user_collection = db["users"]
-    users = user_collection.find()
-    user_list = []
-    for user in users:
-        if user is not None:
-            user_list.append(User(**user))
-        else:
-            raise HTTPException(status_code=404, detail="No users found")
+    import time
 
-    return user_list
+    start_db = time.time()
+    user_collection = db["users"]
+    users = await user_collection.find().to_list(length=None)
+    end_db = time.time()
+
+    start_process = time.time()
+    # user_list = []
+    # for user in users:
+    #     user_list.append(User(**user))
+    end_process = time.time()
+
+    print(f"DB query time: {end_db - start_db:.4f}s")
+    print(f"Conversion time: {end_process - start_process:.4f}s")
+    print(f"Total time: {end_process - start_db:.4f}s")
+
+    return [User(**user) for user in users]
 
 
 @router.put(
@@ -83,7 +88,7 @@ async def update_user(
 ):
     """Update a user in the database by id"""
     user_info_to_update = {
-        k: v for k, v in updated_info.dict().items() if v is not None
+        k: v for k, v in updated_info.model_dump().items() if v is not None
     }
 
     if "password" in user_info_to_update:
@@ -100,13 +105,13 @@ async def update_user(
         )
 
     user_collection = db["users"]
-    old_user = user_collection.find_one_and_update(
-        {"_id": user_id}, {"$set": user_info_to_update}
+    old_user = await user_collection.find_one_and_update(
+        {"_id": ObjectId(user_id)}, {"$set": user_info_to_update}
     )
     if old_user is None:
         raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
 
-    updated_user = user_collection.find_one({"_id": user_id})
+    updated_user = await user_collection.find_one({"_id": ObjectId(user_id)})
     return User(**updated_user)
 
 
@@ -123,7 +128,10 @@ async def delete_user(
         )
 
     user_collection = db["users"]
-    user = user_collection.find_one_and_delete({"_id": user_id})
-
-    if user is None:
+    result = await user_collection.delete_one({"_id": ObjectId(user_id)})
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+    # user = user_collection.find_one_and_delete({"_id": user_id})
+
+    # if user is None:
+    #     raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")

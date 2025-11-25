@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from bson.objectid import ObjectId
 from passlib.context import CryptContext
@@ -10,7 +10,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class User(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     username: str = Field(...)
     password: str = Field(...)
     roles: List[str] = Field(default=["user"])

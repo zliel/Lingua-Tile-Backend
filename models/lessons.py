@@ -8,7 +8,7 @@ from .sentences import Sentence
 
 
 class Lesson(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     title: str = Field(...)
     section_id: Optional[PyObjectId] = Field(default=None)
     card_ids: Optional[List[PyObjectId]] = Field(default=[])
