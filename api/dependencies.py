@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from passlib.context import CryptContext
-from pymongo import AsyncMongoClient, MongoClient
+from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 
@@ -47,7 +47,6 @@ async def get_current_user(
 
         # Find the user in the database by username
         user = await user_collection.find_one({"username": username})
-        print(f"Found user: {user}")
         if user is None:
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"

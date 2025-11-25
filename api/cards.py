@@ -84,7 +84,6 @@ async def update_card(
         k: v for k, v in updated_info.model_dump().items() if v is not None
     }
 
-    print("card_info_to_update:", card_info_to_update)
     card_collection: AsyncCollection = db["cards"]
     lesson_collection = db["lessons"]
 
@@ -105,7 +104,6 @@ async def update_card(
 
     # If the card_info_to_update contains lesson IDs, we need to add the card to the lessons
     if card_info_to_update.__contains__("lesson_ids"):
-        print("updating lessons for card")
         for lesson_id in card_info_to_update["lesson_ids"]:
             await lesson_collection.find_one_and_update(
                 {"_id": ObjectId(lesson_id)},
