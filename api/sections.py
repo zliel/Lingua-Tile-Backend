@@ -1,4 +1,6 @@
+from bson import ObjectId
 from fastapi import APIRouter, status, HTTPException, Depends
+from pymongo.asynchronous.collection import AsyncCollection
 
 from api.dependencies import get_current_user, get_db
 from api.users import is_admin
@@ -15,32 +17,41 @@ async def create_section(
     if not is_admin(current_user):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    section_collection = db["sections"]
+    section_collection: AsyncCollection = db["sections"]
     lesson_collection = db["lessons"]
 
-    section_collection.insert_one(section.model_dump(by_alias=True))
-    new_section = section_collection.find_one({"_id": section.id})
+    inserted_section = await section_collection.insert_one(
+        section.model_dump(by_alias=True, exclude={"id"})
+    )
+    new_section = await section_collection.find_one(
+        {"_id": inserted_section.inserted_id}
+    )
+
+    if new_section is None:
+        raise HTTPException(status_code=500, detail="Section creation failed")
 
     for lesson_id in new_section["lesson_ids"]:
         # This returns the lesson BEFORE the update
-        old_lesson = lesson_collection.find_one_and_update(
-            {"_id": lesson_id}, {"$set": {"section_id": new_section["_id"]}}
+        old_lesson = await lesson_collection.find_one_and_update(
+            {"_id": ObjectId(lesson_id)},
+            {"$set": {"section_id": str(new_section["_id"])}},
         )
-        # If a lesson's section id has been updated, the old section it was in should have its lesson id removed
+        # If a lesson's section id has been updated,
+        # the old section it was in should have its lesson id removed
         if old_lesson and old_lesson.get("section_id") is not None:
             if old_lesson["section_id"] != new_section["_id"]:
-                section_collection.find_one_and_update(
-                    {"_id": old_lesson["section_id"]},
-                    {"$pull": {"lesson_ids": old_lesson["_id"]}},
+                await section_collection.find_one_and_update(
+                    {"_id": ObjectId(old_lesson["section_id"])},
+                    {"$pull": {"lesson_ids": str(old_lesson["_id"])}},
                 )
     return section
 
 
 @router.get("/all")
 async def get_all_sections(db=Depends(get_db)):
-    section_collection = db["sections"]
+    section_collection = db.get_collection("sections")
+    sections = await section_collection.find().to_list()
 
-    sections = section_collection.find()
     return [Section(**section) for section in sections]
 
 
@@ -48,7 +59,7 @@ async def get_all_sections(db=Depends(get_db)):
 async def get_section(section_id: PyObjectId, db=Depends(get_db)):
     section_collection = db["sections"]
 
-    section = section_collection.find_one({"_id": section_id})
+    section = await section_collection.find_one({"_id": ObjectId(section_id)})
     if section is None:
         raise HTTPException(status_code=404, detail="Section not found")
     return Section(**section)
@@ -70,30 +81,34 @@ async def update_section(
     section_info_to_update = {
         k: v for k, v in updated_info.model_dump().items() if v is not None
     }
-    old_section = section_collection.find_one_and_update(
-        {"_id": section_id}, {"$set": section_info_to_update}
+    old_section = await section_collection.find_one_and_update(
+        {"_id": ObjectId(section_id)}, {"$set": section_info_to_update}
     )
 
     if old_section is None:
         raise HTTPException(status_code=404, detail="Section not found")
 
-    updated_section = section_collection.find_one({"_id": section_id})
+    updated_section = await section_collection.find_one({"_id": ObjectId(section_id)})
 
     for lesson_id in old_section["lesson_ids"]:
         if lesson_id not in updated_section["lesson_ids"]:
-            lesson_collection.find_one_and_update(
-                {"_id": lesson_id}, {"$unset": {"section_id": ""}}
+            await lesson_collection.find_one_and_update(
+                {"_id": ObjectId(lesson_id)}, {"$unset": {"section_id": ""}}
             )
 
     for lesson_id in updated_section["lesson_ids"]:
         if lesson_id not in old_section["lesson_ids"]:
-            lesson_collection.find_one_and_update(
-                {"_id": lesson_id}, {"$set": {"section_id": updated_section["_id"]}}
+            await lesson_collection.find_one_and_update(
+                {"_id": ObjectId(lesson_id)},
+                {"$set": {"section_id": updated_section["_id"]}},
             )
 
         # Remove the lessons id from other sections
-        section_collection.update_many(
-            {"_id": {"$ne": section_id}, "lesson_ids": {"$in": [lesson_id]}},
+        await section_collection.update_many(
+            {
+                "_id": {"$ne": ObjectId(section_id)},
+                "lesson_ids": {"$in": [lesson_id]},
+            },
             {"$pull": {"lesson_ids": lesson_id}},
         )
 
@@ -112,7 +127,7 @@ async def delete_section(
     section_collection = db["sections"]
     lesson_collection = db["lessons"]
 
-    section_collection.delete_one({"_id": section_id})
-    lesson_collection.update_many(
+    await section_collection.delete_one({"_id": ObjectId(section_id)})
+    await lesson_collection.update_many(
         {"section_id": section_id}, {"$unset": {"section_id": ""}}
     )

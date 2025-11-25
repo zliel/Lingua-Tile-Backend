@@ -32,7 +32,7 @@ def create_access_token(data: dict, expires_delta: timedelta):
 async def login_user(user: User, db=Depends(get_db)):
     """Login a user"""
     user_collection = db["users"]
-    found_user = user_collection.find_one({"username": user.username})
+    found_user = await user_collection.find_one({"username": user.username})
 
     if found_user is None:
         raise HTTPException(status_code=404, detail="User not found")

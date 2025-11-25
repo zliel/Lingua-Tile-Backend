@@ -1,9 +1,10 @@
 import os
 from typing import List
 
+from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import Depends, APIRouter, status, HTTPException, Request
-from pymongo import MongoClient
+from pymongo import AsyncMongoClient
 
 from api.dependencies import get_current_user
 from models import PyObjectId, User
@@ -15,7 +16,7 @@ from models.update_lesson import UpdateLesson
 load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
 mongo_host = os.getenv("MONGO_HOST")
-client = MongoClient(mongo_host)
+client = AsyncMongoClient(mongo_host)
 db = client["lingua-tile"]
 lesson_collection = db["lessons"]
 card_collection = db["cards"]
@@ -27,9 +28,8 @@ lesson_review_collection = db["lesson_reviews"]
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
 async def get_all_lessons():
     """Retrieve all lessons from the database"""
-    lessons = lesson_collection.find()
-
-    return [Lesson(**lesson) for lesson in lessons.to_list()]
+    lessons = await lesson_collection.find().to_list()
+    return [Lesson(**lesson) for lesson in lessons]
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
@@ -48,18 +48,19 @@ async def create_lesson(lesson: Lesson):
             for sentence in lesson.sentences
         ]
 
-    lesson_collection.insert_one(lesson.model_dump(by_alias=True))
-    new_lesson = lesson_collection.find_one({"_id": lesson.id})
+    await lesson_collection.insert_one(lesson.model_dump(by_alias=True, exclude={"id"}))
+    new_lesson = await lesson_collection.find_one({"_id": ObjectId(lesson.id)})
     # Update the cards that are in the lesson
     if new_lesson and new_lesson["card_ids"] is not None:
         for card_id in new_lesson["card_ids"]:
-            card_collection.find_one_and_update(
-                {"_id": card_id}, {"$addToSet": {"lesson_ids": new_lesson["_id"]}}
+            await card_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$addToSet": {"lesson_ids": ObjectId(new_lesson["_id"])}},
             )
 
     if new_lesson and new_lesson["section_id"] is not None:
-        section_collection.find_one_and_update(
-            {"_id": new_lesson["section_id"]},
+        await section_collection.find_one_and_update(
+            {"_id": ObjectId(new_lesson["section_id"])},
             {"$addToSet": {"lesson_ids": new_lesson["_id"]}},
         )
     return lesson
@@ -73,9 +74,9 @@ async def get_lessons_by_category(category: str):
             status_code=400,
             detail="Category must be one of 'grammar', 'vocabulary', or 'kanji'",
         )
-    lessons = lesson_collection.find(
+    lessons = await lesson_collection.find(
         {"category": {"$regex": f"^{category}", "$options": "i"}}
-    )
+    ).to_list()
 
     return [Lesson(**lesson) for lesson in lessons]
 
@@ -87,16 +88,16 @@ async def get_lesson_reviews(current_user: User = Depends(get_current_user)):
     if not user_id:
         raise HTTPException(status_code=404, detail="User not found")
 
-    lesson_reviews = lesson_review_collection.find({"user_id": user_id})
+    lesson_reviews = await lesson_review_collection.find({"user_id": user_id}).to_list()
     if not lesson_reviews:
         return []
-    return [LessonReview(**lesson_review) for lesson_review in lesson_reviews]
+    return [LessonReview(**review) for review in lesson_reviews]
 
 
 @router.get("/{lesson_id}")
 async def get_lesson(lesson_id: PyObjectId):
     """Retrieve a lesson from the database by id"""
-    lesson = lesson_collection.find_one({"_id": lesson_id})
+    lesson = await lesson_collection.find_one({"_id": ObjectId(lesson_id)})
     return (
         Lesson(**lesson)
         if lesson
@@ -116,8 +117,8 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
         lesson_info_to_update["section_id"] = None
 
     # update a lesson in the database by id and return the old lesson to help with updating the cards
-    old_lesson = lesson_collection.find_one_and_update(
-        {"_id": lesson_id}, {"$set": lesson_info_to_update}
+    old_lesson = await lesson_collection.find_one_and_update(
+        {"_id": ObjectId(lesson_id)}, {"$set": lesson_info_to_update}
     )
     if old_lesson is None:
         raise HTTPException(
@@ -125,7 +126,7 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
         )
 
     # update a lesson in the database by id
-    updated_lesson = lesson_collection.find_one({"_id": lesson_id})
+    updated_lesson = await lesson_collection.find_one({"_id": ObjectId(lesson_id)})
     if updated_lesson is None:
         raise HTTPException(
             status_code=404, detail=f"Lesson with id {lesson_id} failed to update"
@@ -135,27 +136,30 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
     if old_lesson["card_ids"]:
         for card_id in old_lesson["card_ids"]:
             if card_id not in updated_lesson["card_ids"]:
-                card_collection.find_one_and_update(
-                    {"_id": card_id}, {"$pull": {"lesson_ids": lesson_id}}
+                await card_collection.find_one_and_update(
+                    {"_id": ObjectId(card_id)},
+                    {"$pull": {"lesson_ids": lesson_id}},
                 )
 
     # If the lesson contains cards, update the cards to reflect the new lesson
     if updated_lesson["card_ids"]:
         for card_id in updated_lesson["card_ids"]:
             # add the lesson id to the list of lessons the card is associated with
-            card_collection.find_one_and_update(
-                {"_id": card_id}, {"$addToSet": {"lesson_ids": lesson_id}}
+            await card_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$addToSet": {"lesson_ids": lesson_id}},
             )
 
     # handle updates to the section_id fields
     if old_lesson["section_id"] != updated_lesson["section_id"]:
         # remove the lesson id from the old section
-        section_collection.find_one_and_update(
-            {"_id": old_lesson["section_id"]}, {"$pull": {"lesson_ids": lesson_id}}
+        await section_collection.find_one_and_update(
+            {"_id": ObjectId(old_lesson["section_id"])},
+            {"$pull": {"lesson_ids": lesson_id}},
         )
         # add the lesson id to the new section
-        section_collection.find_one_and_update(
-            {"_id": updated_lesson["section_id"]},
+        await section_collection.find_one_and_update(
+            {"_id": ObjectId(updated_lesson["section_id"])},
             {"$addToSet": {"lesson_ids": lesson_id}},
         )
 
@@ -165,15 +169,18 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
 @router.delete("/delete/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_lesson(lesson_id: PyObjectId):
     """Delete a lesson from the database by id"""
-    lesson_collection.delete_one({"_id": lesson_id})
+    res = await lesson_collection.delete_one({"_id": ObjectId(lesson_id)})
+    print(res.deleted_count)
 
     # update all cards associated with the lesson to reflect the deletion of the lesson
-    card_collection.update_many(
-        {"lesson_ids": lesson_id}, {"$pull": {"lesson_ids": lesson_id}}
+    await card_collection.update_many(
+        {"lesson_ids": ObjectId(lesson_id)},
+        {"$pull": {"lesson_ids": lesson_id}},
     )
 
-    section_collection.update_one(
-        {"lesson_ids": lesson_id}, {"$pull": {"lesson_ids": lesson_id}}
+    await section_collection.update_one(
+        {"lesson_ids": ObjectId(lesson_id)},
+        {"$pull": {"lesson_ids": lesson_id}},
     )
 
 
@@ -185,35 +192,44 @@ async def review_lesson(
     # Access the "lesson_id" and "user_id" from the request body
     body = await request.json()
     lesson_id = body["lesson_id"]
-    user_id = current_user.id
+    user_id = current_user.id or ""
     overall_performance = body["overall_performance"]
 
-    lesson = lesson_collection.find_one({"_id": PyObjectId(lesson_id)})
+    lesson: Lesson | None = await lesson_collection.find_one(
+        {"_id": ObjectId(lesson_id)}
+    )
     if not lesson:
         raise HTTPException(
             status_code=404, detail=f"Lesson with id {lesson_id} not found"
         )
 
-    user = user_collection.find_one({"_id": PyObjectId(user_id)})
+    user: User | None = await user_collection.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
-    lesson_review = lesson_review_collection.find_one(
-        {"lesson_id": lesson["_id"], "user_id": user["_id"]}
+
+    lesson_review = await lesson_review_collection.find_one(
+        {"lesson_id": lesson_id, "user_id": user_id}
     )
 
     # If the lesson review does not exist, create a new one
     if not lesson_review:
-        lesson_review = LessonReview(lesson_id=lesson["_id"], user_id=user["_id"])
+        lesson_review = LessonReview(lesson_id=lesson_id, user_id=user_id)
         lesson_review.review(overall_performance)
-        lesson_review_collection.insert_one(lesson_review.model_dump(by_alias=True))
+        await lesson_review_collection.insert_one(
+            lesson_review.model_dump(by_alias=True, exclude={"id"})
+        )
 
     else:  # Otherwise update the existing one
         lesson_review = LessonReview(**lesson_review)
         lesson_review.review(overall_performance)
-        lesson_review_collection.find_one_and_update(
+        await lesson_review_collection.find_one_and_update(
             {
                 "lesson_id": lesson["_id"],
                 "user_id": user["_id"],
             },
-            {"$set": lesson_review.model_dump(by_alias=True)},
+            {
+                "$set": {
+                    k: v for k, v in lesson_review.model_dump().items() if k != "_id"
+                }
+            },
         )

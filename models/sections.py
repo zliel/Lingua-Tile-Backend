@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from bson.objectid import ObjectId
 from pydantic import BaseModel, Field
@@ -7,9 +7,9 @@ from .py_object_id import PyObjectId
 
 
 class Section(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str = Field(...)
-    lesson_ids: List[PyObjectId] = Field(default=[])
+    lesson_ids: List[PyObjectId] = Field(default_factory=list)
 
     class Config:
         arbitrary_types_allowed = True
