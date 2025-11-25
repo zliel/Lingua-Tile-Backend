@@ -48,14 +48,16 @@ async def create_lesson(lesson: Lesson):
             for sentence in lesson.sentences
         ]
 
-    await lesson_collection.insert_one(lesson.model_dump(by_alias=True, exclude={"id"}))
-    new_lesson = await lesson_collection.find_one({"_id": ObjectId(lesson.id)})
+    result = await lesson_collection.insert_one(
+        lesson.model_dump(by_alias=True, exclude={"id"})
+    )
+    new_lesson = await lesson_collection.find_one({"_id": ObjectId(result.inserted_id)})
     # Update the cards that are in the lesson
     if new_lesson and new_lesson["card_ids"] is not None:
         for card_id in new_lesson["card_ids"]:
             await card_collection.find_one_and_update(
                 {"_id": ObjectId(card_id)},
-                {"$addToSet": {"lesson_ids": ObjectId(new_lesson["_id"])}},
+                {"$addToSet": {"lesson_ids": new_lesson["_id"]}},
             )
 
     if new_lesson and new_lesson["section_id"] is not None:
@@ -151,7 +153,10 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
             )
 
     # handle updates to the section_id fields
-    if old_lesson["section_id"] != updated_lesson["section_id"]:
+    if (
+        old_lesson.__contains__("section_id")
+        and old_lesson["section_id"] != updated_lesson["section_id"]
+    ):
         # remove the lesson id from the old section
         await section_collection.find_one_and_update(
             {"_id": ObjectId(old_lesson["section_id"])},
@@ -162,6 +167,11 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
             {"_id": ObjectId(updated_lesson["section_id"])},
             {"$addToSet": {"lesson_ids": lesson_id}},
         )
+    elif not old_lesson.__contains__("section_id"):
+        await section_collection.update_one(
+            {"_id": ObjectId(updated_lesson["section_id"])},
+            {"$addToSet": {"lesson_ids": lesson_id}},
+        )
 
     return Lesson(**updated_lesson)
 
@@ -169,8 +179,7 @@ async def update_lesson(lesson_id: PyObjectId, updated_info: UpdateLesson):
 @router.delete("/delete/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_lesson(lesson_id: PyObjectId):
     """Delete a lesson from the database by id"""
-    res = await lesson_collection.delete_one({"_id": ObjectId(lesson_id)})
-    print(res.deleted_count)
+    await lesson_collection.delete_one({"_id": ObjectId(lesson_id)})
 
     # update all cards associated with the lesson to reflect the deletion of the lesson
     await card_collection.update_many(

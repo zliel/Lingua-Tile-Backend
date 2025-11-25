@@ -57,22 +57,8 @@ async def get_all_users(
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Not authorized to view all users")
 
-    import time
-
-    start_db = time.time()
     user_collection = db["users"]
     users = await user_collection.find().to_list(length=None)
-    end_db = time.time()
-
-    start_process = time.time()
-    # user_list = []
-    # for user in users:
-    #     user_list.append(User(**user))
-    end_process = time.time()
-
-    print(f"DB query time: {end_db - start_db:.4f}s")
-    print(f"Conversion time: {end_process - start_process:.4f}s")
-    print(f"Total time: {end_process - start_db:.4f}s")
 
     return [User(**user) for user in users]
 
