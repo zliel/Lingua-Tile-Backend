@@ -83,6 +83,25 @@ async def get_lessons_by_category(category: str):
     return [Lesson(**lesson) for lesson in lessons]
 
 
+@router.get("/review/{lesson_id}", status_code=status.HTTP_200_OK)
+async def get_lesson_review(
+    lesson_id: PyObjectId, current_user: User = Depends(get_current_user)
+):
+    """Retrieve a lesson review from the database by lesson id for the current user"""
+    user_id = current_user.id
+    if not user_id:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    lesson_review = await lesson_review_collection.find_one(
+        {"lesson_id": lesson_id, "user_id": user_id}
+    )
+
+    if not lesson_review:
+        return None
+
+    return LessonReview(**lesson_review)
+
+
 @router.get("/reviews", status_code=status.HTTP_200_OK)
 async def get_lesson_reviews(current_user: User = Depends(get_current_user)):
     """Retrieve all lesson reviews from the database"""
