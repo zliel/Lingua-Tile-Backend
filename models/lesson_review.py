@@ -3,7 +3,7 @@ from typing import Optional
 
 from bson import ObjectId
 from fsrs import Card, Rating, Scheduler
-from pydantic import BaseModel, Field, field_validator, field_serializer
+from pydantic import BaseModel, Field
 
 from .py_object_id import PyObjectId  # Assuming this is defined elsewhere
 
@@ -37,11 +37,11 @@ class LessonReview(BaseModel):
         """Review the lesson card and update its schedule based on overall performance."""
         rating = Rating.Again  # Default rating
         # TODO: Switch to a switch statement
-        if overall_performance > 0.8:  # Adjust threshold as needed
+        if overall_performance == 4:  # Adjust threshold as needed
             rating = Rating.Easy
-        elif overall_performance > 0.6:
+        elif overall_performance == 3:
             rating = Rating.Good
-        elif overall_performance > 0.4:
+        elif overall_performance == 2:
             rating = Rating.Hard
         else:
             rating = Rating.Again

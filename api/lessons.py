@@ -252,8 +252,8 @@ async def review_lesson(
         lesson_review.review(overall_performance)
         await lesson_review_collection.find_one_and_update(
             {
-                "lesson_id": lesson["_id"],
-                "user_id": user["_id"],
+                "lesson_id": lesson_id,
+                "user_id": user_id,
             },
             {
                 "$set": {
