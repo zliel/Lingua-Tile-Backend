@@ -1,6 +1,6 @@
 from typing import List
 from bson import ObjectId
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, Body, status, HTTPException, Depends
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.results import InsertOneResult
 
@@ -138,3 +138,16 @@ async def delete_card(
     await card_collection.delete_one({"_id": ObjectId(card_id)})
 
     await lesson_collection.update_many({}, {"$pull": {"card_ids": card_id}})
+
+
+@router.post("/by-ids", response_model=List[Card])
+async def get_cards_by_ids(
+    card_ids: List[PyObjectId] = Body(alias="card_ids"), db=Depends(get_db)
+):
+    """Retrieve multiple cards from the database by a list of ids"""
+    print(f"In card_ids: {card_ids}")
+    card_collection = db["cards"]
+    cards = await card_collection.find(
+        {"_id": {"$in": [ObjectId(cid) for cid in card_ids]}}
+    ).to_list()
+    return [Card(**card) for card in cards]
