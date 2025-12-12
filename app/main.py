@@ -90,7 +90,7 @@ async def check_overdue_reviews():
         # Count overdue reviews
         overdue_count = await lesson_review_collection.count_documents(
             {
-                "user_id": user_id,
+                "user_id": str(user_id),
                 "next_review": {"$lte": datetime.now(timezone.utc)},
             }
         )
