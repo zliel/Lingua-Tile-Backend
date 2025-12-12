@@ -109,7 +109,7 @@ async def check_overdue_reviews():
                         subscription_info=sub,
                         data=payload,
                         vapid_private_key=vapid_private_key,
-                        vapid_claims=vapid_claims,
+                        vapid_claims=vapid_claims.copy(),
                     )
                     new_subs.append(sub)
                 except WebPushException as e:
