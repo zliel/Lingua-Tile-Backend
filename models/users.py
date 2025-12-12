@@ -20,6 +20,10 @@ class PushSubscription(BaseModel):
         json_encoders = {ObjectId: lambda oid: str(oid)}
 
 
+class PushUnsubscribe(BaseModel):
+    endpoint: str
+
+
 class User(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     username: str = Field(...)

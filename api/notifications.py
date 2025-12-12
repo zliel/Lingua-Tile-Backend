@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, status, HTTPException
 
 from api.dependencies import get_current_user
 from models import User
-from models.users import PushSubscription
+from models.users import PushSubscription, PushUnsubscribe
+from bson import ObjectId
 from pymongo import AsyncMongoClient
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
@@ -37,7 +38,10 @@ async def subscribe(
 
     # Add subscription to user's list if it doesn't exist
     await user_collection.update_one(
-        {"_id": user_id, "push_subscriptions.endpoint": {"$ne": subscription.endpoint}},
+        {
+            "_id": ObjectId(user_id),
+            "push_subscriptions.endpoint": {"$ne": subscription.endpoint},
+        },
         {"$push": {"push_subscriptions": subscription.model_dump()}},
     )
 
@@ -46,7 +50,7 @@ async def subscribe(
 
 @router.post("/unsubscribe", status_code=status.HTTP_200_OK)
 async def unsubscribe(
-    subscription: PushSubscription, current_user: User = Depends(get_current_user)
+    subscription: PushUnsubscribe, current_user: User = Depends(get_current_user)
 ):
     """
     Unsubscribe a user from push notifications.
@@ -56,7 +60,7 @@ async def unsubscribe(
         raise HTTPException(status_code=404, detail="User not found")
 
     await user_collection.update_one(
-        {"_id": user_id},
+        {"_id": ObjectId(user_id)},
         {"$pull": {"push_subscriptions": {"endpoint": subscription.endpoint}}},
     )
 
