@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status, HTTPException
 
 from api.dependencies import get_current_user
 from models import User
-from models.users import PushSubscription
+from models.users import PushSubscription, PushUnsubscribe
 from bson import ObjectId
 from pymongo import AsyncMongoClient
 
@@ -50,7 +50,7 @@ async def subscribe(
 
 @router.post("/unsubscribe", status_code=status.HTTP_200_OK)
 async def unsubscribe(
-    subscription: PushSubscription, current_user: User = Depends(get_current_user)
+    subscription: PushUnsubscribe, current_user: User = Depends(get_current_user)
 ):
     """
     Unsubscribe a user from push notifications.
