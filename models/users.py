@@ -9,12 +9,24 @@ from .py_object_id import PyObjectId
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: dict
+    expirationTime: Optional[float] = None
+    user_id: Optional[PyObjectId] = Field(alias="user_id", default=None)
+
+    class Config:
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: lambda oid: str(oid)}
+
+
 class User(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     username: str = Field(...)
     password: str = Field(...)
     roles: List[str] = Field(default=["user"])
     completed_lessons: List[PyObjectId] = Field(default=[])
+    push_subscriptions: List[PushSubscription] = Field(default=[])
 
     class Config:
         arbitrary_types_allowed = True
