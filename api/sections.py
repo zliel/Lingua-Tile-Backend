@@ -30,20 +30,32 @@ async def create_section(
     if new_section is None:
         raise HTTPException(status_code=500, detail="Section creation failed")
 
-    for lesson_id in new_section["lesson_ids"]:
-        # This returns the lesson BEFORE the update
-        old_lesson = await lesson_collection.find_one_and_update(
-            {"_id": ObjectId(lesson_id)},
+    if new_section["lesson_ids"]:
+        lesson_object_ids = [
+            ObjectId(lesson_id) for lesson_id in new_section["lesson_ids"]
+        ]
+
+        await lesson_collection.update_many(
+            {"_id": {"$in": lesson_object_ids}},
             {"$set": {"section_id": str(new_section["_id"])}},
         )
-        # If a lesson's section id has been updated,
-        # the old section it was in should have its lesson id removed
-        if old_lesson and old_lesson.get("section_id") is not None:
-            if old_lesson["section_id"] != new_section["_id"]:
-                await section_collection.find_one_and_update(
-                    {"_id": ObjectId(old_lesson["section_id"])},
-                    {"$pull": {"lesson_ids": str(old_lesson["_id"])}},
-                )
+
+        await section_collection.update_many(
+            {
+                "_id": {"$ne": new_section["_id"]},
+                "lesson_ids": {"$in": new_section["lesson_ids"]},
+            },
+            {"$pull": {"lesson_ids": {"$in": new_section["lesson_ids"]}}},
+        )
+
+        await section_collection.update_many(
+            {
+                "_id": {"$ne": new_section["_id"]},
+                "lesson_ids": {"$in": new_section["lesson_ids"]},
+            },
+            {"$pull": {"lesson_ids": {"$in": new_section["lesson_ids"]}}},
+        )
+
     return section
 
 
@@ -90,27 +102,39 @@ async def update_section(
 
     updated_section = await section_collection.find_one({"_id": ObjectId(section_id)})
 
-    for lesson_id in old_section["lesson_ids"]:
-        if lesson_id not in updated_section["lesson_ids"]:
-            await lesson_collection.find_one_and_update(
-                {"_id": ObjectId(lesson_id)}, {"$unset": {"section_id": ""}}
+    if old_section["lesson_ids"]:
+        removed_lesson_ids = set(old_section["lesson_ids"]) - set(
+            updated_section["lesson_ids"]
+        )
+        if removed_lesson_ids:
+            # Unset section_id for these lessons
+            await lesson_collection.update_many(
+                {
+                    "_id": {
+                        "$in": [ObjectId(lesson_id) for lesson_id in removed_lesson_ids]
+                    }
+                },
+                {"$unset": {"section_id": ""}},
             )
 
-    for lesson_id in updated_section["lesson_ids"]:
-        if lesson_id not in old_section["lesson_ids"]:
-            await lesson_collection.find_one_and_update(
-                {"_id": ObjectId(lesson_id)},
+    if updated_section["lesson_ids"]:
+        current_lesson_ids = [
+            ObjectId(lesson_id) for lesson_id in updated_section["lesson_ids"]
+        ]
+
+        if current_lesson_ids:
+            await lesson_collection.update_many(
+                {"_id": {"$in": current_lesson_ids}},
                 {"$set": {"section_id": updated_section["_id"]}},
             )
 
-        # Remove the lessons id from other sections
-        await section_collection.update_many(
-            {
-                "_id": {"$ne": ObjectId(section_id)},
-                "lesson_ids": {"$in": [lesson_id]},
-            },
-            {"$pull": {"lesson_ids": lesson_id}},
-        )
+            await section_collection.update_many(
+                {
+                    "_id": {"$ne": ObjectId(section_id)},
+                    "lesson_ids": {"$in": updated_section["lesson_ids"]},
+                },
+                {"$pull": {"lesson_ids": {"$in": updated_section["lesson_ids"]}}},
+            )
 
     return Section(**updated_section)
 
