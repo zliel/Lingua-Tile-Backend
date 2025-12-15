@@ -9,6 +9,7 @@ from .py_object_id import PyObjectId
 class UpdateLesson(BaseModel):
     title: Optional[str] = None
     section_id: Optional[PyObjectId] = None
+    order_index: Optional[int] = None
     category: Optional[str] = None
     content: Optional[str] = None
     sentences: Optional[List[dict]] = None

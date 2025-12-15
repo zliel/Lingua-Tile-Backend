@@ -8,6 +8,7 @@ from .py_object_id import PyObjectId
 class UpdateSection(BaseModel):
     name: Optional[str] = None
     lesson_ids: Optional[List[PyObjectId]] = None
+    order_index: Optional[int] = None
 
     class Config:
         arbitrary_types_allowed = True
