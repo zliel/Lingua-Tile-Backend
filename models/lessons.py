@@ -11,6 +11,7 @@ class Lesson(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     title: str = Field(...)
     section_id: Optional[PyObjectId] = Field(default=None)
+    order_index: int = Field(default=0)
     card_ids: Optional[List[PyObjectId]] = Field(default=[])
     content: Optional[str] = Field(default="")  # This will be markdown content
     sentences: Optional[List[Sentence]] = Field(default=[])

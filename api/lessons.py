@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
 async def get_all_lessons(db=Depends(get_db)):
     """Retrieve all lessons from the database"""
-    lessons = await db["lessons"].find().to_list()
+    lessons = await db["lessons"].find().sort("order_index", 1).to_list()
     return [Lesson(**lesson) for lesson in lessons]
 
 
@@ -67,8 +67,12 @@ async def get_lessons_by_category(category: str, db=Depends(get_db)):
             detail="Category must be one of 'grammar', 'vocabulary', or 'kanji'",
         )
     lessons = (
-        await db["lessons"]
-        .find({"category": {"$regex": f"^{category}", "$options": "i"}})
+        (
+            await db["lessons"].find(
+                {"category": {"$regex": f"^{category}", "$options": "i"}}
+            )
+        )
+        .sort("order_index", 1)
         .to_list()
     )
 

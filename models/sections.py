@@ -10,6 +10,7 @@ class Section(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str = Field(...)
     lesson_ids: List[PyObjectId] = Field(default_factory=list)
+    order_index: int = Field(default=0)
 
     class Config:
         arbitrary_types_allowed = True

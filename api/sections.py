@@ -62,7 +62,7 @@ async def create_section(
 @router.get("/all")
 async def get_all_sections(db=Depends(get_db)):
     section_collection = db.get_collection("sections")
-    sections = await section_collection.find().to_list()
+    sections = await section_collection.find().sort("order_index", 1).to_list()
 
     return [Section(**section) for section in sections]
 
