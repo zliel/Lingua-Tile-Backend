@@ -1,6 +1,6 @@
 from typing import List
 from bson import ObjectId
-from fastapi import APIRouter, Body, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.results import InsertOneResult
 
@@ -44,11 +44,13 @@ async def create_card(
 
     # Update the lessons that the card is in
     if new_card["lesson_ids"]:
-        for lesson_id in new_card["lesson_ids"]:
-            await lesson_collection.find_one_and_update(
-                {"_id": ObjectId(lesson_id)},
-                {"$addToSet": {"card_ids": str(new_card["_id"])}},
-            )
+        lesson_object_ids = [
+            ObjectId(lesson_id) for lesson_id in new_card["lesson_ids"]
+        ]
+        await lesson_collection.update_many(
+            {"_id": {"$in": lesson_object_ids}},
+            {"$addToSet": {"card_ids": str(new_card["_id"])}},
+        )
 
     return card
 
@@ -102,20 +104,31 @@ async def update_card(
             status_code=404, detail=f"Card with id {card_id} was not found after update"
         )
 
-    # If the card_info_to_update contains lesson IDs, we need to add the card to the lessons
-    if card_info_to_update.__contains__("lesson_ids"):
-        for lesson_id in card_info_to_update["lesson_ids"]:
-            await lesson_collection.find_one_and_update(
-                {"_id": ObjectId(lesson_id)},
+    if "lesson_ids" in card_info_to_update:
+        new_lesson_ids = [
+            ObjectId(lesson_id) for lesson_id in card_info_to_update["lesson_ids"]
+        ]
+
+        if new_lesson_ids:
+            await lesson_collection.update_many(
+                {"_id": {"$in": new_lesson_ids}},
                 {"$addToSet": {"card_ids": card_id}},
             )
 
-    # If the card was in a lesson before, but not after updating, remove it from that lesson
-    if old_card["lesson_ids"]:
-        for lesson_id in old_card["lesson_ids"]:
-            if lesson_id not in card_info_to_update["lesson_ids"]:
-                await lesson_collection.find_one_and_update(
-                    {"_id": ObjectId(lesson_id)},
+        # Remove card from lessons it's no longer in
+        if old_card["lesson_ids"]:
+            removed_lesson_ids = set(old_card["lesson_ids"]) - set(
+                card_info_to_update["lesson_ids"]
+            )
+            if removed_lesson_ids:
+                await lesson_collection.update_many(
+                    {
+                        "_id": {
+                            "$in": [
+                                ObjectId(lesson_id) for lesson_id in removed_lesson_ids
+                            ]
+                        }
+                    },
                     {"$pull": {"card_ids": card_id}},
                 )
 
@@ -141,13 +154,23 @@ async def delete_card(
 
 
 @router.post("/by-ids", response_model=List[Card])
-async def get_cards_by_ids(
-    card_ids: List[PyObjectId] = Body(alias="card_ids"), db=Depends(get_db)
-):
-    """Retrieve multiple cards from the database by a list of ids"""
-    print(f"In card_ids: {card_ids}")
+async def get_cards_by_ids(card_ids: List[PyObjectId], db=Depends(get_db)):
+    """Retrieve cards by a list of IDs, preserving the order of the input list"""
     card_collection = db["cards"]
-    cards = await card_collection.find(
-        {"_id": {"$in": [ObjectId(cid) for cid in card_ids]}}
-    ).to_list()
-    return [Card(**card) for card in cards]
+
+    object_ids = [ObjectId(card_id) for card_id in card_ids]
+
+    # Fetch all cards that match the IDs
+    cards_cursor = card_collection.find({"_id": {"$in": object_ids}})
+    cards_list = await cards_cursor.to_list(length=len(card_ids))
+
+    # Using a map for faster lookups
+    cards_map = {str(card["_id"]): card for card in cards_list}
+
+    # Reconstruct the list in the order of the input card_ids
+    ordered_cards = []
+    for card_id in card_ids:
+        if card_id in cards_map:
+            ordered_cards.append(Card(**cards_map[card_id]))
+
+    return ordered_cards

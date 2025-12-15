@@ -43,15 +43,15 @@ async def create_lesson(lesson: Lesson, db=Depends(get_db)):
     )
     new_lesson = await db["lessons"].find_one({"_id": ObjectId(result.inserted_id)})
     # Update the cards that are in the lesson
-    if new_lesson and new_lesson["card_ids"] is not None:
-        for card_id in new_lesson["card_ids"]:
-            await db["cards"].find_one_and_update(
-                {"_id": ObjectId(card_id)},
-                {"$addToSet": {"lesson_ids": new_lesson["_id"]}},
-            )
+    if new_lesson and new_lesson["card_ids"]:
+        card_object_ids = [ObjectId(card_id) for card_id in new_lesson["card_ids"]]
+        await db["cards"].update_many(
+            {"_id": {"$in": card_object_ids}},
+            {"$addToSet": {"lesson_ids": new_lesson["_id"]}},
+        )
 
-    if new_lesson and new_lesson["section_id"] is not None:
-        await db["sections"].find_one_and_update(
+    if new_lesson and new_lesson["section_id"]:
+        await db["sections"].update_one(
             {"_id": ObjectId(new_lesson["section_id"])},
             {"$addToSet": {"lesson_ids": new_lesson["_id"]}},
         )
@@ -151,23 +151,22 @@ async def update_lesson(
             status_code=404, detail=f"Lesson with id {lesson_id} failed to update"
         )
 
-    # if a card was in the old lesson but not the new lesson, remove the lesson id from the card
+    # if cards were in the old lesson but not the new lesson, remove the lesson id from them
     if old_lesson["card_ids"]:
-        for card_id in old_lesson["card_ids"]:
-            if card_id not in updated_lesson["card_ids"]:
-                await db["cards"].find_one_and_update(
-                    {"_id": ObjectId(card_id)},
-                    {"$pull": {"lesson_ids": lesson_id}},
-                )
+        cards_to_remove = set(old_lesson["card_ids"]) - set(updated_lesson["card_ids"])
+        if cards_to_remove:
+            await db["cards"].update_many(
+                {"_id": {"$in": [ObjectId(card_id) for card_id in cards_to_remove]}},
+                {"$pull": {"lesson_ids": lesson_id}},
+            )
 
     # If the lesson contains cards, update the cards to reflect the new lesson
     if updated_lesson["card_ids"]:
-        for card_id in updated_lesson["card_ids"]:
-            # add the lesson id to the list of lessons the card is associated with
-            await db["cards"].find_one_and_update(
-                {"_id": ObjectId(card_id)},
-                {"$addToSet": {"lesson_ids": lesson_id}},
-            )
+        current_card_ids = [ObjectId(card_id) for card_id in updated_lesson["card_ids"]]
+        await db["cards"].update_many(
+            {"_id": {"$in": current_card_ids}},
+            {"$addToSet": {"lesson_ids": lesson_id}},
+        )
 
     # handle updates to the section_id fields
     if (
@@ -175,12 +174,12 @@ async def update_lesson(
         and old_lesson["section_id"] != updated_lesson["section_id"]
     ):
         # remove the lesson id from the old section
-        await db["sections"].find_one_and_update(
+        await db["sections"].update_one(
             {"_id": ObjectId(old_lesson["section_id"])},
             {"$pull": {"lesson_ids": lesson_id}},
         )
         # add the lesson id to the new section
-        await db["sections"].find_one_and_update(
+        await db["sections"].update_one(
             {"_id": ObjectId(updated_lesson["section_id"])},
             {"$addToSet": {"lesson_ids": lesson_id}},
         )
