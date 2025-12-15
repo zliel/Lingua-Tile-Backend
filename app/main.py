@@ -4,7 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from pywebpush import webpush, WebPushException
+from pymongo import AsyncMongoClient
+from services.notifications import check_overdue_reviews
+from api import dependencies
 
 from api.auth import router as auth_router
 from api.cards import router as cards_router
@@ -14,10 +16,9 @@ from api.translations import router as translations_router
 from api.users import router as users_router
 from api.notifications import router as notifications_router
 
+
 import logging
-import json
 import os
-from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
@@ -62,80 +63,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 scheduler = AsyncIOScheduler()
 
 
-async def check_overdue_reviews():
-    """
-    Background job to check for overdue reviews and send push notifications.
-    """
-    from pymongo import AsyncMongoClient
-
-    mongo_host = os.getenv("MONGO_HOST")
-    client = AsyncMongoClient(mongo_host)
-    db = client["lingua-tile"]
-    user_collection = db["users"]
-    lesson_review_collection = db["lesson_reviews"]
-
-    vapid_private_key = os.getenv("VAPID_PRIVATE_KEY")
-    vapid_claims = {"sub": os.getenv("VAPID_MAILTO", "mailto:zpliel@gmail.com")}
-
-    if not vapid_private_key:
-        print("VAPID_PRIVATE_KEY not set, skipping push notifications.")
-        return
-
-    # Find users with subscriptions
-    async for user in user_collection.find(
-        {"push_subscriptions": {"$exists": True, "$not": {"$size": 0}}}
-    ):
-        user_id = user["_id"]
-
-        # Count overdue reviews
-        overdue_count = await lesson_review_collection.count_documents(
-            {
-                "user_id": str(user_id),
-                "next_review": {"$lte": datetime.now(timezone.utc)},
-            }
-        )
-
-        if overdue_count > 0:
-            payload = json.dumps({"count": overdue_count})
-
-            # Send to all subscriptions
-            new_subs = []
-            param_subs = user.get("push_subscriptions", [])
-            subs_changed = False
-
-            for sub in param_subs:
-                try:
-                    webpush(
-                        subscription_info=sub,
-                        data=payload,
-                        vapid_private_key=vapid_private_key,
-                        vapid_claims=vapid_claims.copy(),
-                    )
-                    new_subs.append(sub)
-                except WebPushException as e:
-                    if e.response and e.response.status_code == 410:
-                        # Subscription expired/gone
-                        subs_changed = True
-                    else:
-                        # Keep it and log error
-                        print(f"WebPush Error for user {user['username']}: {e}")
-                        new_subs.append(sub)
-                except Exception as e:
-                    print(f"Error sending push to {user['username']}: {e}")
-                    new_subs.append(sub)
-
-            if subs_changed:
-                await user_collection.update_one(
-                    {"_id": user_id}, {"$set": {"push_subscriptions": new_subs}}
-                )
-
-
 @app.on_event("startup")
 async def start_scheduler():
-    scheduler.add_job(
-        check_overdue_reviews,
-        IntervalTrigger(hours=4),  # Check every 4 hours
-        id="check_reviews",
-        replace_existing=True,
-    )
-    scheduler.start()
+    mongo_host = os.getenv("MONGO_HOST")
+    dependencies.db_client = AsyncMongoClient(mongo_host)
+
+    # scheduler.add_job(
+    #     check_overdue_reviews,
+    #     IntervalTrigger(hours=24),  # Check every 24 hours
+    #     id="check_reviews",
+    #     replace_existing=True,
+    # )
+    # scheduler.start()
+
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    await dependencies.db_client.close()

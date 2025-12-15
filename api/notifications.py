@@ -1,33 +1,28 @@
+from models.users import PushUnsubscribe
 import os
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, status, HTTPException
 
-from api.dependencies import get_current_user
+from api.dependencies import get_current_user, get_db
 from models import User
-from models.users import PushSubscription, PushUnsubscribe
-from bson import ObjectId
-from pymongo import AsyncMongoClient
+from models.users import PushSubscription
+
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
-
-mongo_host = os.getenv("MONGO_HOST")
-client = AsyncMongoClient(mongo_host)
-db = client["lingua-tile"]
-user_collection = db["users"]
 
 
 @router.get("/vapid-public-key")
 async def get_vapid_public_key():
-    key = os.getenv("VAPID_PUBLIC_KEY", "")
-    print(
-        f"DEBUG: Serving VAPID Public Key: {key[:10]}... (len={len(key) if key else 0})"
-    )
+    key = os.getenv("VAPID_PUBLIC_KEY")
     return {"publicKey": key}
 
 
 @router.post("/subscribe", status_code=status.HTTP_201_CREATED)
 async def subscribe(
-    subscription: PushSubscription, current_user: User = Depends(get_current_user)
+    subscription: PushSubscription,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ):
     """
     Subscribe a user to push notifications.
@@ -37,7 +32,9 @@ async def subscribe(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Add subscription to user's list if it doesn't exist
-    await user_collection.update_one(
+    # We match by endpoint to ensure uniqueness
+    # Note: user_id is a string from Pydantic, but MongoDB uses ObjectId for _id
+    await db["users"].update_one(
         {
             "_id": ObjectId(user_id),
             "push_subscriptions.endpoint": {"$ne": subscription.endpoint},
@@ -45,12 +42,19 @@ async def subscribe(
         {"$push": {"push_subscriptions": subscription.model_dump()}},
     )
 
+    # If the subscription endpoint already exists, we might want to update keys,
+    # but for now we assume endpoint is unique enough or we just didn't add it again.
+    # To be safe/correct, if it exists we should probably update it.
+    # But $ne check prevents duplicates.
+
     return {"message": "Subscribed successfully"}
 
 
 @router.post("/unsubscribe", status_code=status.HTTP_200_OK)
 async def unsubscribe(
-    subscription: PushUnsubscribe, current_user: User = Depends(get_current_user)
+    subscription: PushUnsubscribe,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ):
     """
     Unsubscribe a user from push notifications.
@@ -59,7 +63,7 @@ async def unsubscribe(
     if not user_id:
         raise HTTPException(status_code=404, detail="User not found")
 
-    await user_collection.update_one(
+    await db["users"].update_one(
         {"_id": ObjectId(user_id)},
         {"$pull": {"push_subscriptions": {"endpoint": subscription.endpoint}}},
     )

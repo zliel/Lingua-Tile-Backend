@@ -20,11 +20,17 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 
 
-def get_db():
-    mongo_host = os.getenv("MONGO_HOST")
-    client = AsyncMongoClient(mongo_host)
-    db: AsyncDatabase = client["lingua-tile"]
-    return db
+db_client = None
+
+
+async def get_db():
+    global db_client
+    if db_client is None:
+        mongo_host = os.getenv("MONGO_HOST")
+        db_client = AsyncMongoClient(mongo_host)
+
+    db: AsyncDatabase = db_client["lingua-tile"]
+    yield db
 
 
 async def get_current_user(
