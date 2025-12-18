@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime, timezone
 
 from bson import ObjectId
 from dotenv import load_dotenv
@@ -10,6 +11,7 @@ from models.lesson_review import LessonReview
 from models.lessons import Lesson
 from models.sentences import Sentence
 from models.update_lesson import UpdateLesson
+from models.review_log import ReviewLog
 
 load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
@@ -56,6 +58,13 @@ async def create_lesson(lesson: Lesson, db=Depends(get_db)):
             {"$addToSet": {"lesson_ids": new_lesson["_id"]}},
         )
     return lesson
+
+
+@router.get("/total", status_code=status.HTTP_200_OK)
+async def get_total_lesson_count(db=Depends(get_db)):
+    """Retrieve the total number of lessons in the database"""
+    total_lessons = await db["lessons"].count_documents({})
+    return {"total": total_lessons}
 
 
 @router.get("/by-category/{category}")
@@ -260,3 +269,32 @@ async def review_lesson(
                 }
             },
         )
+
+    review_log = ReviewLog(
+        lesson_id=lesson_id,
+        user_id=user_id,
+        review_date=datetime.now(timezone.utc),
+        rating=overall_performance,
+    )
+    await db["review_logs"].insert_one(
+        review_log.model_dump(by_alias=True, exclude={"id"})
+    )
+
+
+@router.get("/reviews/history/all", status_code=status.HTTP_200_OK)
+async def get_review_history(
+    current_user: User = Depends(get_current_user), db=Depends(get_db)
+):
+    """Retrieve all review logs for the current user to show history"""
+    user_id = current_user.id
+    if not user_id:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    logs = (
+        await db["review_logs"]
+        .find({"user_id": user_id})
+        .sort("review_date", -1)
+        .to_list()
+    )
+
+    return [ReviewLog(**log) for log in logs]
