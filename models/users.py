@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from bson.objectid import ObjectId
@@ -31,6 +32,9 @@ class User(BaseModel):
     roles: List[str] = Field(default=["user"])
     completed_lessons: List[PyObjectId] = Field(default=[])
     push_subscriptions: List[PushSubscription] = Field(default=[])
+    current_streak: int = Field(default=0)
+    last_activity_date: Optional[datetime] = Field(default=None)
+    timezone: str = Field(default="UTC")
 
     class Config:
         arbitrary_types_allowed = True

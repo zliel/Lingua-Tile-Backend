@@ -12,6 +12,7 @@ from models.lessons import Lesson
 from models.sentences import Sentence
 from models.update_lesson import UpdateLesson
 from models.review_log import ReviewLog
+from utils.streaks import update_user_streak
 
 load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
@@ -239,10 +240,6 @@ async def review_lesson(
             status_code=404, detail=f"Lesson with id {lesson_id} not found"
         )
 
-    user: User | None = await db["users"].find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
-
     lesson_review = await db["lesson_reviews"].find_one(
         {"lesson_id": lesson_id, "user_id": user_id}
     )
@@ -278,6 +275,17 @@ async def review_lesson(
     )
     await db["review_logs"].insert_one(
         review_log.model_dump(by_alias=True, exclude={"id"})
+    )
+
+    update_user_streak(current_user)
+    await db["users"].update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "current_streak": current_user.current_streak,
+                "last_activity_date": current_user.last_activity_date,
+            }
+        },
     )
 
 
