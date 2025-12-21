@@ -13,6 +13,7 @@ from models.sentences import Sentence
 from models.update_lesson import UpdateLesson
 from models.review_log import ReviewLog
 from utils.streaks import update_user_streak
+from utils.xp import add_xp_to_user
 
 load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
@@ -278,15 +279,58 @@ async def review_lesson(
     )
 
     update_user_streak(current_user)
+
+    xp_to_add = 10
+    is_first_completion = False
+
+    # Check if lesson is already completed
+    if lesson_id in current_user.completed_lessons:
+        # Already completed, repeat review awards 5 XP
+        xp_to_add = 5
+    else:
+        # First time completion
+        is_first_completion = True
+        if lesson:
+            category = lesson.get("category", "").lower()
+            if category == "grammar":
+                xp_to_add = 20
+            elif category == "practice":
+                xp_to_add = 15
+            elif category == "flashcards":
+                xp_to_add = 10
+
+    new_xp, new_level, leveled_up = add_xp_to_user(
+        current_user.xp, current_user.level, xp_to_add
+    )
+
+    update_fields = {
+        "current_streak": current_user.current_streak,
+        "last_activity_date": current_user.last_activity_date,
+        "xp": new_xp,
+        "level": new_level,
+    }
+
+    # If first completion, add to completed_lessons
+    if is_first_completion:
+        update_operation = {
+            "$set": update_fields,
+            "$addToSet": {"completed_lessons": lesson_id},
+        }
+    else:
+        update_operation = {"$set": update_fields}
+
     await db["users"].update_one(
         {"_id": ObjectId(user_id)},
-        {
-            "$set": {
-                "current_streak": current_user.current_streak,
-                "last_activity_date": current_user.last_activity_date,
-            }
-        },
+        update_operation,
     )
+
+    return {
+        "message": "Review submitted successfully",
+        "xp_gained": xp_to_add,
+        "new_level": new_level,
+        "new_xp": new_xp,
+        "leveled_up": leveled_up,
+    }
 
 
 @router.get("/reviews/history/all", status_code=status.HTTP_200_OK)
