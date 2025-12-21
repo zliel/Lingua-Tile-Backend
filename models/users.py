@@ -35,6 +35,8 @@ class User(BaseModel):
     current_streak: int = Field(default=0)
     last_activity_date: Optional[datetime] = Field(default=None)
     timezone: str = Field(default="UTC")
+    level: int = Field(default=1)
+    xp: int = Field(default=0)
 
     class Config:
         arbitrary_types_allowed = True
