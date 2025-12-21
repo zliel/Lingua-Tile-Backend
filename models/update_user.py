@@ -14,6 +14,7 @@ class UpdateUser(BaseModel):
     password: Optional[str] = None
     roles: Optional[List[str]] = None
     completed_lessons: Optional[List[PyObjectId]] = None
+    timezone: Optional[str] = None
 
     class Config:
         validate_by_name = True
