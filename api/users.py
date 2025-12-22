@@ -1,5 +1,7 @@
 from bson import ObjectId
 from fastapi import APIRouter, status, HTTPException, Depends
+from typing import List, Dict
+from pymongo.asynchronous.collection import AsyncCollection
 
 from api.dependencies import get_db, get_current_user as get_client, pwd_context
 from models import User, PyObjectId, UpdateUser
@@ -23,6 +25,33 @@ async def create_user(user: User, db=Depends(get_db)):
     await user_collection.insert_one(user.model_dump(by_alias=True, exclude={"id"}))
 
     return user
+
+
+@router.get("/activity", response_model=List[Dict[str, str | int]])
+async def get_user_activity(
+    current_user: User = Depends(get_client),
+    db=Depends(get_db),
+):
+    """Retrieve user activity map (reviews per day)"""
+    pipeline = [
+        {"$match": {"user_id": current_user.id}},
+        {
+            "$group": {
+                "_id": {
+                    "$dateToString": {"format": "%Y-%m-%d", "date": "$review_date"}
+                },
+                "count": {"$sum": 1},
+            }
+        },
+        {"$sort": {"_id": 1}},
+    ]
+
+    review_collection: AsyncCollection = db["review_logs"]
+
+    agg_result = await review_collection.aggregate(pipeline)
+    activity_data = await agg_result.to_list(length=None)
+
+    return [{"date": item["_id"], "count": item["count"]} for item in activity_data]
 
 
 @router.get("/", response_model=User, response_model_exclude={"password"})
