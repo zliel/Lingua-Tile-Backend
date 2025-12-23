@@ -1,11 +1,13 @@
-from typing import List
+import random
+import re
+from typing import List, Optional
 from datetime import datetime, timezone
 
 from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import Depends, APIRouter, status, HTTPException, Request
 
-from api.dependencies import get_current_user, get_db
+from api.dependencies import get_current_user, get_db, get_current_user_optional
 from models import PyObjectId, User
 from models.lesson_review import LessonReview
 from models.lessons import Lesson
@@ -127,16 +129,62 @@ async def get_lesson_reviews(
 
 
 @router.get("/{lesson_id}")
-async def get_lesson(lesson_id: PyObjectId, db=Depends(get_db)):
+async def get_lesson(
+    lesson_id: PyObjectId,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db=Depends(get_db),
+):
     """Retrieve a lesson from the database by id"""
     lesson = await db["lessons"].find_one({"_id": ObjectId(lesson_id)})
-    return (
-        Lesson(**lesson)
-        if lesson
-        else HTTPException(
+    if not lesson:
+        raise HTTPException(
             status_code=404, detail=f"Lesson with id {lesson_id} not found"
         )
-    )
+
+    # Scramble and Reverse Logic if user has already reviewed the lesson
+    if current_user:
+        user_id = current_user.id
+        lesson_review = await db["lesson_reviews"].find_one(
+            {"lesson_id": lesson_id, "user_id": user_id}
+        )
+
+        if lesson_review:
+            random.shuffle(lesson["sentences"])
+
+            processed_sentences = []
+            for sentence_dict in lesson["sentences"]:
+                if (
+                    random.random() > 0.5
+                    and sentence_dict.get("possible_answers")
+                    and len(sentence_dict["possible_answers"]) > 0
+                ):
+                    # Create reversed sentence structure
+                    original_japanese = sentence_dict["full_sentence"]
+                    english_prompt = sentence_dict["possible_answers"][0]
+                    words = sentence_dict.get("words", [])
+
+                    # Clean words by removing furigana (e.g. "学生(がくせい)" -> "学生")
+                    clean_words = [re.sub(r"\(.*?\)", "", w) for w in words]
+
+                    # Spaced with Furigana (for Word Bank display)
+                    # Unspaced (for Validation/Keyboard)
+                    spaced_japanese = " ".join(words) if words else original_japanese
+                    unspaced_japanese = (
+                        "".join(clean_words)
+                        if clean_words
+                        else original_japanese.replace(" ", "")
+                    )
+
+                    # Ensure we have at least one spaced version for Word Bank splitting and one clean version for checking
+                    new_answers = [spaced_japanese, unspaced_japanese]
+                    sentence_dict["full_sentence"] = english_prompt
+                    sentence_dict["possible_answers"] = new_answers
+
+                processed_sentences.append(sentence_dict)
+
+            lesson["sentences"] = processed_sentences
+
+    return Lesson(**lesson)
 
 
 @router.put("/update/{lesson_id}")
