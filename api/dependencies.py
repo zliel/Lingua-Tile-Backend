@@ -15,6 +15,7 @@ from models import User
 
 load_dotenv(".env")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -64,7 +65,35 @@ async def get_current_user(
         raise HTTPException(
             status_code=401, detail="Invalid authentication credentials"
         )
+
     except jose.exceptions.JWTError:
         raise HTTPException(
             status_code=401, detail="Invalid authentication credentials"
         )
+
+
+async def get_current_user_optional(
+    token: str = Depends(oauth2_scheme_optional), db=Depends(get_db)
+) -> User | None:
+    if not token:
+        return None
+    try:
+        # Decode the token to get the username
+        if not SECRET_KEY:
+            return None
+
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+
+        if username is None:
+            return None
+
+        user_collection: AsyncCollection = db["users"]
+        user = await user_collection.find_one({"username": username})
+        if user is None:
+            return None
+
+        return User(**user)
+
+    except (jose.exceptions.ExpiredSignatureError, jose.exceptions.JWTError):
+        return None
