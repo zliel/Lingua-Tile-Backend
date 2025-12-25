@@ -37,6 +37,7 @@ class User(BaseModel):
     timezone: str = Field(default="UTC")
     level: int = Field(default=1)
     xp: int = Field(default=0)
+    learning_mode: str = Field(default="map")  # "map" or "list"
 
     class Config:
         arbitrary_types_allowed = True
