@@ -97,3 +97,13 @@ async def get_current_user_optional(
 
     except (jose.exceptions.ExpiredSignatureError, jose.exceptions.JWTError):
         return None
+
+
+class RoleChecker:
+    def __init__(self, allowed_roles: list[str]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, user: User = Depends(get_current_user)):
+        if any(role in user.roles for role in self.allowed_roles):
+            return user
+        raise HTTPException(status_code=403, detail="Operation not permitted")
