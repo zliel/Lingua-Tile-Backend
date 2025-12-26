@@ -2,9 +2,10 @@ from models.users import PushUnsubscribe
 import os
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Request, Depends, status, HTTPException
 
 from api.dependencies import get_current_user, get_db
+from app.limiter import limiter
 from models import User
 from models.users import PushSubscription
 
@@ -13,13 +14,16 @@ router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 
 
 @router.get("/vapid-public-key")
-async def get_vapid_public_key():
+@limiter.limit("10/minute")
+async def get_vapid_public_key(request: Request):
     key = os.getenv("VAPID_PUBLIC_KEY")
     return {"publicKey": key}
 
 
 @router.post("/subscribe", status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def subscribe(
+    request: Request,
     subscription: PushSubscription,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
@@ -51,7 +55,9 @@ async def subscribe(
 
 
 @router.post("/unsubscribe", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def unsubscribe(
+    request: Request,
     subscription: PushUnsubscribe,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),

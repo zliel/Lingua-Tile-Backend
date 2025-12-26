@@ -1,19 +1,21 @@
 from typing import List
 from bson import ObjectId
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, Request, status, HTTPException, Depends
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.results import InsertOneResult
 
-from api.dependencies import get_db, get_current_user
+from api.dependencies import RoleChecker, get_db, get_current_user
 from api.users import is_admin
+from app.limiter import limiter
 from models import Card, UpdateCard, PyObjectId, User
 
 router = APIRouter(prefix="/api/cards", tags=["Cards"])
 
 
 @router.get("/all", response_model=List[Card])
+@limiter.limit("5/minute")
 async def get_all_cards(
-    current_user: User = Depends(get_current_user), db=Depends(get_db)
+    request: Request, current_user: User = Depends(get_current_user), db=Depends(get_db)
 ):
     """Retrieve all cards from the database"""
     if not is_admin(current_user):
@@ -22,9 +24,18 @@ async def get_all_cards(
     return [Card(**card) for card in cards]
 
 
-@router.post("/create", response_model=Card, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create",
+    response_model=Card,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
+@limiter.limit("10/minute")
 async def create_card(
-    card: Card, current_user: User = Depends(get_current_user), db=Depends(get_db)
+    request: Request,
+    card: Card,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ):
     """Create a new card in the database"""
     if not is_admin(current_user):
@@ -56,7 +67,8 @@ async def create_card(
 
 
 @router.get("/{card_id}", response_model=Card)
-async def get_card(card_id: PyObjectId, db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_card(request: Request, card_id: PyObjectId, db=Depends(get_db)):
     """Retrieve a card from the database by id"""
     card_collection = db["cards"]
     card = await card_collection.find_one({"_id": ObjectId(card_id)})
@@ -64,15 +76,24 @@ async def get_card(card_id: PyObjectId, db=Depends(get_db)):
 
 
 @router.get("/lesson/{lesson_id}", response_model=List[Card])
-async def get_cards_by_lesson(lesson_id: PyObjectId, db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_cards_by_lesson(
+    request: Request, lesson_id: PyObjectId, db=Depends(get_db)
+):
     """Retrieve all cards associated with a lesson from the database by lesson id"""
     card_collection = db["cards"]
     cards = await card_collection.find({"lesson_ids": lesson_id}).to_list()
     return [Card(**card) for card in cards]
 
 
-@router.put("/update/{card_id}", response_model=Card)
+@router.put(
+    "/update/{card_id}",
+    response_model=Card,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
+@limiter.limit("10/minute")
 async def update_card(
+    request: Request,
     card_id: PyObjectId,
     updated_info: UpdateCard,
     current_user: User = Depends(get_current_user),
@@ -135,8 +156,14 @@ async def update_card(
     return updated_card
 
 
-@router.delete("/delete/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/delete/{card_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
+@limiter.limit("10/minute")
 async def delete_card(
+    request: Request,
     card_id: PyObjectId,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
@@ -154,7 +181,10 @@ async def delete_card(
 
 
 @router.post("/by-ids", response_model=List[Card])
-async def get_cards_by_ids(card_ids: List[PyObjectId], db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_cards_by_ids(
+    request: Request, card_ids: List[PyObjectId], db=Depends(get_db)
+):
     """Retrieve cards by a list of IDs, preserving the order of the input list"""
     card_collection = db["cards"]
 

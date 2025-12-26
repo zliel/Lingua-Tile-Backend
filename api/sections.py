@@ -60,7 +60,8 @@ async def create_section(request: Request, section: Section, db=Depends(get_db))
 
 
 @router.get("/all")
-async def get_all_sections(db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_all_sections(request: Request, db=Depends(get_db)):
     section_collection = db.get_collection("sections")
     sections = await section_collection.find().sort("order_index", 1).to_list()
 
@@ -68,7 +69,8 @@ async def get_all_sections(db=Depends(get_db)):
 
 
 @router.get("/{section_id}")
-async def get_section(section_id: PyObjectId, db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_section(request: Request, section_id: PyObjectId, db=Depends(get_db)):
     section_collection = db["sections"]
 
     section = await section_collection.find_one({"_id": ObjectId(section_id)})
@@ -78,7 +80,9 @@ async def get_section(section_id: PyObjectId, db=Depends(get_db)):
 
 
 @router.put("/update/{section_id}", dependencies=[Depends(RoleChecker(["admin"]))])
+@limiter.limit("10/minute")
 async def update_section(
+    request: Request,
     section_id: PyObjectId,
     updated_info: UpdateSection,
     db=Depends(get_db),
@@ -140,7 +144,9 @@ async def update_section(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(RoleChecker(["admin"]))],
 )
+@limiter.limit("10/minute")
 async def delete_section(
+    request: Request,
     section_id: PyObjectId,
     db=Depends(get_db),
 ):
