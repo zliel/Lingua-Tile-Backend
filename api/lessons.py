@@ -7,7 +7,13 @@ from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import Depends, APIRouter, status, HTTPException, Request
 
-from api.dependencies import get_current_user, get_db, get_current_user_optional
+from api.dependencies import (
+    get_current_user,
+    get_db,
+    get_current_user_optional,
+    RoleChecker,
+)
+from app.limiter import limiter
 from models import PyObjectId, User
 from models.lesson_review import LessonReview
 from models.lessons import Lesson
@@ -28,7 +34,11 @@ async def get_all_lessons(db=Depends(get_db)):
     return [Lesson(**lesson) for lesson in lessons]
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
 async def create_lesson(lesson: Lesson, db=Depends(get_db)):
     """Create a new lesson in the database"""
     # Ensure the category is title case
@@ -187,7 +197,7 @@ async def get_lesson(
     return Lesson(**lesson)
 
 
-@router.put("/update/{lesson_id}")
+@router.put("/update/{lesson_id}", dependencies=[Depends(RoleChecker(["admin"]))])
 async def update_lesson(
     lesson_id: PyObjectId, updated_info: UpdateLesson, db=Depends(get_db)
 ):
@@ -255,7 +265,11 @@ async def update_lesson(
     return Lesson(**updated_lesson)
 
 
-@router.delete("/delete/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/delete/{lesson_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
 async def delete_lesson(lesson_id: PyObjectId, db=Depends(get_db)):
     """Delete a lesson from the database by id"""
     await db["lessons"].delete_one({"_id": ObjectId(lesson_id)})

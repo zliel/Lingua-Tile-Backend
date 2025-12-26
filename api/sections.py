@@ -1,22 +1,22 @@
 from bson import ObjectId
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, Request, status, HTTPException, Depends
 from pymongo.asynchronous.collection import AsyncCollection
 
-from api.dependencies import get_current_user, get_db
-from api.users import is_admin
+from api.dependencies import get_current_user, get_db, RoleChecker
+from app.limiter import limiter
 from models import Section, PyObjectId, User
 from models.update_section import UpdateSection
 
 router = APIRouter(prefix="/api/sections", tags=["Sections"])
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_section(
-    section: Section, current_user: User = Depends(get_current_user), db=Depends(get_db)
-):
-    if not is_admin(current_user):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
+@router.post(
+    "/create",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
+@limiter.limit("5/minute")
+async def create_section(request: Request, section: Section, db=Depends(get_db)):
     section_collection: AsyncCollection = db["sections"]
     lesson_collection = db["lessons"]
 
@@ -77,16 +77,12 @@ async def get_section(section_id: PyObjectId, db=Depends(get_db)):
     return Section(**section)
 
 
-@router.put("/update/{section_id}")
+@router.put("/update/{section_id}", dependencies=[Depends(RoleChecker(["admin"]))])
 async def update_section(
     section_id: PyObjectId,
     updated_info: UpdateSection,
-    current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    if not is_admin(current_user):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
     section_collection = db["sections"]
     lesson_collection = db["lessons"]
 
@@ -139,15 +135,15 @@ async def update_section(
     return Section(**updated_section)
 
 
-@router.delete("/delete/{section_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/delete/{section_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
 async def delete_section(
     section_id: PyObjectId,
-    current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    if not is_admin(current_user):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
     section_collection = db["sections"]
     lesson_collection = db["lessons"]
 
