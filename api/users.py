@@ -1,9 +1,10 @@
 from bson import ObjectId
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Request
 from typing import List, Dict
 from pymongo.asynchronous.collection import AsyncCollection
 
 from api.dependencies import get_db, get_current_user as get_client, pwd_context
+from app.limiter import limiter
 from models import User, PyObjectId, UpdateUser
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
@@ -14,7 +15,8 @@ def is_admin(user: User):
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def create_user(user: User, db=Depends(get_db)):
+@limiter.limit("5/minute")
+async def create_user(request: Request, user: User, db=Depends(get_db)):
     """Create a new user in the database"""
     user_collection = db["users"]
 

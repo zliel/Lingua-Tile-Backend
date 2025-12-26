@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, Request
 
 from api.dependencies import (
     get_current_user,
@@ -11,6 +11,7 @@ from api.dependencies import (
     get_db,
 )
 from api.users import is_admin
+from app.limiter import limiter
 from models import User
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
@@ -29,7 +30,8 @@ def create_access_token(data: dict, expires_delta: timedelta):
 
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login_user(user: User, db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def login_user(request: Request, user: User, db=Depends(get_db)):
     """Login a user"""
     user_collection = db["users"]
     found_user = await user_collection.find_one({"username": user.username})
