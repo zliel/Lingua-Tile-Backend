@@ -15,6 +15,10 @@ from api.sections import router as section_router
 from api.translations import router as translations_router
 from api.users import router as users_router
 from api.notifications import router as notifications_router
+from app.limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.logging_config import setup_logging
 
 
@@ -59,6 +63,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
     )
+
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 
 scheduler = AsyncIOScheduler()
