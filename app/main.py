@@ -15,6 +15,7 @@ from api.sections import router as section_router
 from api.translations import router as translations_router
 from api.users import router as users_router
 from api.notifications import router as notifications_router
+from app.logging_config import setup_logging
 
 
 import logging
@@ -65,6 +66,7 @@ scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 async def start_scheduler():
+    setup_logging()
     mongo_host = os.getenv("MONGO_HOST")
     dependencies.db_client = AsyncMongoClient(mongo_host)
 
