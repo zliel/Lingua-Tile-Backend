@@ -47,6 +47,8 @@ class LessonReview(BaseModel):
             rating = Rating.Again
 
         # Convert the card dictionary from db to a Card object
+        # NOTE: The review_card method does accept a number of ms it took to review,
+        # but due to the different lesson types, there isn't a good way to track that at the moment
         card = Card.from_dict(self.card_object)
         reviewed_card: Card = fsrs_scheduler.review_card(
             card, rating, datetime.now(timezone.utc)
