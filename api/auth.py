@@ -55,7 +55,8 @@ async def login_user(request: Request, user: User, db=Depends(get_db)):
 
 
 @router.get("/check-admin", status_code=status.HTTP_200_OK)
-async def check_admin(current_user: User = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def check_admin(request: Request, current_user: User = Depends(get_current_user)):
     """Check if the current user is an admin"""
     if is_admin(current_user):
         return {"isAdmin": True}

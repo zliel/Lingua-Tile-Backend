@@ -3,7 +3,12 @@ from fastapi import APIRouter, status, HTTPException, Depends, Request
 from typing import List, Dict
 from pymongo.asynchronous.collection import AsyncCollection
 
-from api.dependencies import get_db, get_current_user as get_client, pwd_context
+from api.dependencies import (
+    get_db,
+    get_current_user as get_client,
+    pwd_context,
+    RoleChecker,
+)
 from app.limiter import limiter
 from models import User, PyObjectId, UpdateUser
 
@@ -30,7 +35,9 @@ async def create_user(request: Request, user: User, db=Depends(get_db)):
 
 
 @router.get("/activity", response_model=List[Dict[str, str | int]])
+@limiter.limit("10/minute")
 async def get_user_activity(
+    request: Request,
     current_user: User = Depends(get_client),
     db=Depends(get_db),
 ):
@@ -57,13 +64,21 @@ async def get_user_activity(
 
 
 @router.get("/", response_model=User, response_model_exclude={"password"})
-async def get_current_user(current_user: User = Depends(get_client)):
+@limiter.limit("15/minute")
+async def get_current_user(request: Request, current_user: User = Depends(get_client)):
     """Retrieve the current user"""
     return current_user
 
 
-@router.get("/{user_id}", response_model=User, response_model_exclude={"password"})
+@router.get(
+    "/{user_id}",
+    response_model=User,
+    response_model_exclude={"password"},
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
+@limiter.limit("10/minute")
 async def get_user(
+    request: Request,
     user_id: PyObjectId,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
@@ -79,10 +94,14 @@ async def get_user(
 
 
 @router.get(
-    "/admin/all", response_model=list[User], response_model_exclude={"password"}
+    "/admin/all",
+    response_model=list[User],
+    response_model_exclude={"password"},
+    dependencies=[Depends(RoleChecker(["admin"]))],
 )
+@limiter.limit("10/minute")
 async def get_all_users(
-    current_user: User = Depends(get_current_user), db=Depends(get_db)
+    request: Request, current_user: User = Depends(get_current_user), db=Depends(get_db)
 ):
     """Retrieve all users from the database"""
     if not is_admin(current_user):
@@ -97,7 +116,9 @@ async def get_all_users(
 @router.put(
     "/update/{user_id}", response_model=User, response_model_exclude={"password"}
 )
+@limiter.limit("5/minute")
 async def update_user(
+    request: Request,
     user_id: PyObjectId,
     updated_info: UpdateUser,
     current_user: User = Depends(get_current_user),
@@ -133,7 +154,9 @@ async def update_user(
 
 
 @router.delete("/delete/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
 async def delete_user(
+    request: Request,
     user_id: PyObjectId,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),

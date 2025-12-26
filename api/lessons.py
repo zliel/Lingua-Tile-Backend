@@ -28,7 +28,8 @@ router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
 
 
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
-async def get_all_lessons(db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_all_lessons(request: Request, db=Depends(get_db)):
     """Retrieve all lessons from the database"""
     lessons = await db["lessons"].find().sort("order_index", 1).to_list()
     return [Lesson(**lesson) for lesson in lessons]
@@ -39,7 +40,8 @@ async def get_all_lessons(db=Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(RoleChecker(["admin"]))],
 )
-async def create_lesson(lesson: Lesson, db=Depends(get_db)):
+@limiter.limit("5/minute")
+async def create_lesson(request: Request, lesson: Lesson, db=Depends(get_db)):
     """Create a new lesson in the database"""
     # Ensure the category is title case
     lesson.category = lesson.category.title()
@@ -75,26 +77,25 @@ async def create_lesson(lesson: Lesson, db=Depends(get_db)):
 
 
 @router.get("/total", status_code=status.HTTP_200_OK)
-async def get_total_lesson_count(db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_total_lesson_count(request: Request, db=Depends(get_db)):
     """Retrieve the total number of lessons in the database"""
     total_lessons = await db["lessons"].count_documents({})
     return {"total": total_lessons}
 
 
 @router.get("/by-category/{category}")
-async def get_lessons_by_category(category: str, db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_lessons_by_category(request: Request, category: str, db=Depends(get_db)):
     """Retrieve all lessons from the database by category"""
-    if category.lower() not in ["grammar", "vocabulary", "kanji"]:
+    if category.lower() not in ["grammar", "flashcards", "practice"]:
         raise HTTPException(
             status_code=400,
-            detail="Category must be one of 'grammar', 'vocabulary', or 'kanji'",
+            detail="Category must be one of 'grammar', 'flashcards', or 'practice'",
         )
     lessons = (
-        (
-            await db["lessons"].find(
-                {"category": {"$regex": f"^{category}", "$options": "i"}}
-            )
-        )
+        await db["lessons"]
+        .find({"category": {"$regex": f"^{category}", "$options": "i"}})
         .sort("order_index", 1)
         .to_list()
     )
@@ -103,7 +104,9 @@ async def get_lessons_by_category(category: str, db=Depends(get_db)):
 
 
 @router.get("/review/{lesson_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def get_lesson_review(
+    request: Request,
     lesson_id: PyObjectId,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
@@ -124,8 +127,9 @@ async def get_lesson_review(
 
 
 @router.get("/reviews", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def get_lesson_reviews(
-    current_user: User = Depends(get_current_user), db=Depends(get_db)
+    request: Request, current_user: User = Depends(get_current_user), db=Depends(get_db)
 ):
     """Retrieve all lesson reviews from the database"""
     user_id = current_user.id
@@ -139,7 +143,9 @@ async def get_lesson_reviews(
 
 
 @router.get("/{lesson_id}")
+@limiter.limit("10/minute")
 async def get_lesson(
+    request: Request,
     lesson_id: PyObjectId,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db=Depends(get_db),
@@ -198,8 +204,12 @@ async def get_lesson(
 
 
 @router.put("/update/{lesson_id}", dependencies=[Depends(RoleChecker(["admin"]))])
+@limiter.limit("10/minute")
 async def update_lesson(
-    lesson_id: PyObjectId, updated_info: UpdateLesson, db=Depends(get_db)
+    request: Request,
+    lesson_id: PyObjectId,
+    updated_info: UpdateLesson,
+    db=Depends(get_db),
 ):
     """Update a lesson in the database by id"""
     lesson_info_to_update = {
@@ -270,7 +280,8 @@ async def update_lesson(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(RoleChecker(["admin"]))],
 )
-async def delete_lesson(lesson_id: PyObjectId, db=Depends(get_db)):
+@limiter.limit("5/minute")
+async def delete_lesson(request: Request, lesson_id: PyObjectId, db=Depends(get_db)):
     """Delete a lesson from the database by id"""
     await db["lessons"].delete_one({"_id": ObjectId(lesson_id)})
 
@@ -288,6 +299,7 @@ async def delete_lesson(lesson_id: PyObjectId, db=Depends(get_db)):
 
 # Lesson Review Routes
 @router.post("/review", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 async def review_lesson(
     request: Request, current_user: User = Depends(get_current_user), db=Depends(get_db)
 ):
@@ -396,8 +408,9 @@ async def review_lesson(
 
 
 @router.get("/reviews/history/all", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def get_review_history(
-    current_user: User = Depends(get_current_user), db=Depends(get_db)
+    request: Request, current_user: User = Depends(get_current_user), db=Depends(get_db)
 ):
     """Retrieve all review logs for the current user to show history"""
     user_id = current_user.id

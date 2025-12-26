@@ -2,7 +2,9 @@ import os
 
 import requests
 from dotenv import load_dotenv
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+
+from app.limiter import limiter
 
 load_dotenv(".env")
 router = APIRouter(prefix="/api/translations", tags=["Translations"])
@@ -18,7 +20,10 @@ payload = {"q": "Hello, world!", "source": "en", "target": "es"}
 
 
 @router.get("/{src_text}/{src_lang}/{target_lang}", tags=["Translations"])
-async def translate(src_text: str, src_lang: str, target_lang: str) -> dict:
+@limiter.limit("15/minute")
+async def translate(
+    request: Request, src_text: str, src_lang: str, target_lang: str
+) -> dict:
     """Translate text from one language to another"""
     url = f"https://{host}/language/translate/v2"
     querystring = {"q": src_text, "target": target_lang, "source": "en"}
@@ -38,7 +43,8 @@ async def translate(src_text: str, src_lang: str, target_lang: str) -> dict:
 
 
 @router.get("/languages", tags=["Translations"])
-async def get_languages() -> list:
+@limiter.limit("10/minute")
+async def get_languages(request: Request) -> list:
     # url = f"https://{host}/language/translate/v2/languages"
     # response = requests.request("GET", url, headers=headers)
     # filter the response to only return english and japanese

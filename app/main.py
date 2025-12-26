@@ -51,7 +51,8 @@ app.add_middleware(
 
 
 @app.get("/", tags=["Root"])
-async def root():
+@limiter.limit("5/minute")
+async def root(request: Request):
     return {"message": "Hello World!"}
 
 
