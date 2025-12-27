@@ -1,8 +1,8 @@
+from aiocache import cached, caches
 import random
 import re
 from typing import List, Optional
 from datetime import datetime, timezone
-
 from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import Depends, APIRouter, status, HTTPException, Request
@@ -29,6 +29,7 @@ router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
 
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
+@cached(ttl=600, key="all_lessons", namespace="lessons")
 async def get_all_lessons(request: Request, db=Depends(get_db)):
     """Retrieve all lessons from the database"""
     lessons = await db["lessons"].find().sort("order_index", 1).to_list()
@@ -60,6 +61,12 @@ async def create_lesson(request: Request, lesson: Lesson, db=Depends(get_db)):
         lesson.model_dump(by_alias=True, exclude={"id"})
     )
     new_lesson = await db["lessons"].find_one({"_id": ObjectId(result.inserted_id)})
+
+    # Invalidate cache
+    cache = caches.get("default")
+    await cache.delete("all_lessons", namespace="lessons")
+    await cache.delete(f"category_{lesson.category.lower()}", namespace="lessons")
+
     # Update the cards that are in the lesson
     if new_lesson and new_lesson["card_ids"]:
         card_object_ids = [ObjectId(card_id) for card_id in new_lesson["card_ids"]]
@@ -86,6 +93,11 @@ async def get_total_lesson_count(request: Request, db=Depends(get_db)):
 
 @router.get("/by-category/{category}")
 @limiter.limit("10/minute")
+@cached(
+    ttl=600,
+    key_builder=lambda f, *args, **kwargs: f"category_{kwargs['category'].lower()}",
+    namespace="lessons",
+)
 async def get_lessons_by_category(request: Request, category: str, db=Depends(get_db)):
     """Retrieve all lessons from the database by category"""
     if category.lower() not in ["grammar", "flashcards", "practice"]:
@@ -227,11 +239,27 @@ async def update_lesson(
             status_code=404, detail=f"Lesson wih id {lesson_id} not found"
         )
 
+    # Invalidate cache
+    cache = caches.get("default")
+    await cache.delete("all_lessons", namespace="lessons")
+    if old_lesson.get("category"):
+        await cache.delete(
+            f"category_{old_lesson['category'].lower()}", namespace="lessons"
+        )
+
     # update a lesson in the database by id
     updated_lesson = await db["lessons"].find_one({"_id": ObjectId(lesson_id)})
     if updated_lesson is None:
         raise HTTPException(
             status_code=404, detail=f"Lesson with id {lesson_id} failed to update"
+        )
+
+    # Invalidate new category cache if changed
+    if updated_lesson.get("category") and updated_lesson.get(
+        "category"
+    ) != old_lesson.get("category"):
+        await cache.delete(
+            f"category_{updated_lesson['category'].lower()}", namespace="lessons"
         )
 
     # if cards were in the old lesson but not the new lesson, remove the lesson id from them
@@ -283,7 +311,19 @@ async def update_lesson(
 @limiter.limit("5/minute")
 async def delete_lesson(request: Request, lesson_id: PyObjectId, db=Depends(get_db)):
     """Delete a lesson from the database by id"""
+
+    # Fetch lesson first to get category for cache invalidation
+    lesson = await db["lessons"].find_one({"_id": ObjectId(lesson_id)})
+
     await db["lessons"].delete_one({"_id": ObjectId(lesson_id)})
+
+    # Invalidate cache
+    cache = caches.get("default")
+    await cache.delete("all_lessons", namespace="lessons")
+    if lesson and lesson.get("category"):
+        await cache.delete(
+            f"category_{lesson['category'].lower()}", namespace="lessons"
+        )
 
     # update all cards associated with the lesson to reflect the deletion of the lesson
     await db["cards"].update_many(

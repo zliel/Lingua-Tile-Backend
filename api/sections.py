@@ -1,10 +1,11 @@
 from bson import ObjectId
 from fastapi import APIRouter, Request, status, HTTPException, Depends
 from pymongo.asynchronous.collection import AsyncCollection
+from aiocache import cached, caches
 
 from api.dependencies import get_db, RoleChecker
 from app.limiter import limiter
-from models import Section, PyObjectId, Card, Lesson
+from models import Section, PyObjectId, Lesson, Card
 from models.update_section import UpdateSection
 
 router = APIRouter(prefix="/api/sections", tags=["Sections"])
@@ -29,6 +30,10 @@ async def create_section(request: Request, section: Section, db=Depends(get_db))
 
     if new_section is None:
         raise HTTPException(status_code=500, detail="Section creation failed")
+
+    # Invalidate cache
+    cache = caches.get("default")
+    await cache.delete("all_sections", namespace="sections")
 
     if new_section["lesson_ids"]:
         lesson_object_ids = [
@@ -61,6 +66,7 @@ async def create_section(request: Request, section: Section, db=Depends(get_db))
 
 @router.get("/all")
 @limiter.limit("10/minute")
+@cached(ttl=3600, key="all_sections", namespace="sections")
 async def get_all_sections(request: Request, db=Depends(get_db)):
     section_collection = db.get_collection("sections")
     sections = await section_collection.find().sort("order_index", 1).to_list()
@@ -70,6 +76,11 @@ async def get_all_sections(request: Request, db=Depends(get_db)):
 
 @router.get("/{section_id}/download")
 @limiter.limit("5/minute")
+@cached(
+    ttl=600,
+    key_builder=lambda f, *args, **kwargs: f"download_{kwargs['section_id']}",
+    namespace="sections",
+)
 async def download_section(
     request: Request, section_id: PyObjectId, db=Depends(get_db)
 ):
@@ -135,6 +146,11 @@ async def update_section(
     if old_section is None:
         raise HTTPException(status_code=404, detail="Section not found")
 
+    # Invalidate cache
+    cache = caches.get("default")
+    await cache.delete("all_sections", namespace="sections")
+    await cache.delete(f"download_{section_id}", namespace="sections")
+
     updated_section = await section_collection.find_one({"_id": ObjectId(section_id)})
 
     if old_section["lesson_ids"]:
@@ -192,3 +208,8 @@ async def delete_section(
     await lesson_collection.update_many(
         {"section_id": section_id}, {"$unset": {"section_id": ""}}
     )
+
+    # Invalidate cache
+    cache = caches.get("default")
+    await cache.delete("all_sections", namespace="sections")
+    await cache.delete(f"download_{section_id}", namespace="sections")

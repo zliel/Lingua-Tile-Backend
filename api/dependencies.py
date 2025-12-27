@@ -3,9 +3,8 @@ import os
 import jose
 import jwt
 from dotenv import load_dotenv
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt
 from passlib.context import CryptContext
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
@@ -24,14 +23,22 @@ ALGORITHM = "HS256"
 db_client = None
 
 
-async def get_db():
-    global db_client
-    if db_client is None:
-        mongo_host = os.getenv("MONGO_HOST")
-        db_client = AsyncMongoClient(mongo_host)
-
-    db: AsyncDatabase = db_client["lingua-tile"]
-    yield db
+async def get_db(request: Request):
+    """
+    Get the database connection from the application state.
+    Use request.app.state.mongo_client which is initialized in the lifespan.
+    """
+    if hasattr(request.app.state, "mongo_client"):
+        client = request.app.state.mongo_client
+        db: AsyncDatabase = client["lingua-tile"]
+        yield db
+    else:
+        # Fallback for testing or if state is not set
+        global db_client
+        if db_client is None:
+            mongo_host = os.getenv("MONGO_HOST")
+            db_client = AsyncMongoClient(mongo_host)
+        yield db_client["lingua-tile"]
 
 
 async def get_current_user(
