@@ -17,7 +17,6 @@ def setup_logging():
     loggers = [
         logging.getLogger(),
         logging.getLogger("uvicorn.error"),
-        logging.getLogger("aiocache"),
     ]
 
     for logger in loggers:
@@ -25,10 +24,7 @@ def setup_logging():
             logger.removeHandler(h)
 
         logger.addHandler(handler)
-        if logger.name == "aiocache":
-            logger.setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
 
         # Prevent propagation to avoid duplicate logs if root also picks it up
         logger.propagate = False
