@@ -2,9 +2,9 @@ from bson import ObjectId
 from fastapi import APIRouter, Request, status, HTTPException, Depends
 from pymongo.asynchronous.collection import AsyncCollection
 
-from api.dependencies import get_current_user, get_db, RoleChecker
+from api.dependencies import get_db, RoleChecker
 from app.limiter import limiter
-from models import Section, PyObjectId, User
+from models import Section, PyObjectId, Card, Lesson
 from models.update_section import UpdateSection
 
 router = APIRouter(prefix="/api/sections", tags=["Sections"])
@@ -66,6 +66,41 @@ async def get_all_sections(request: Request, db=Depends(get_db)):
     sections = await section_collection.find().sort("order_index", 1).to_list()
 
     return [Section(**section) for section in sections]
+
+
+@router.get("/{section_id}/download")
+@limiter.limit("5/minute")
+async def download_section(
+    request: Request, section_id: PyObjectId, db=Depends(get_db)
+):
+    section_collection = db["sections"]
+    lesson_collection = db["lessons"]
+    card_collection = db["cards"]
+
+    section = await section_collection.find_one({"_id": ObjectId(section_id)})
+    if section is None:
+        raise HTTPException(status_code=404, detail="Section not found")
+
+    lessons = (
+        await lesson_collection.find({"section_id": section["_id"]})
+        .sort("order_index", 1)
+        .to_list()
+    )
+
+    card_ids = []
+    for lesson in lessons:
+        if "card_ids" in lesson and lesson["card_ids"]:
+            card_ids.extend([ObjectId(cid) for cid in lesson["card_ids"]])
+
+    cards = []
+    if card_ids:
+        cards = await card_collection.find({"_id": {"$in": card_ids}}).to_list()
+
+    return {
+        "section": Section(**section),
+        "lessons": [Lesson(**lesson) for lesson in lessons],
+        "cards": [Card(**card) for card in cards],
+    }
 
 
 @router.get("/{section_id}")
