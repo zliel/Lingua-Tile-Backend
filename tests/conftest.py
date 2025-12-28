@@ -43,9 +43,15 @@ async def override_dependency(db_client):
     if db_client:
         app.state.mongo_client = db_client
         dependencies.db_client = db_client
-        pass
+
+        async def override_get_db():
+            yield db_client["lingua-tile-test"]
+
+        app.dependency_overrides[dependencies.get_db] = override_get_db
 
     yield
+
+    app.dependency_overrides = {}
 
     if db_client:
         await db_client["lingua-tile-test"].users.delete_many({})
