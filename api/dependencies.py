@@ -1,5 +1,3 @@
-import os
-
 import jose
 import jwt
 from dotenv import load_dotenv
@@ -10,14 +8,15 @@ from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 
+from app.config import get_settings
 from models import User
 
-load_dotenv(".env")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
+settings = get_settings()
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
 
 db_client = None
@@ -36,7 +35,7 @@ async def get_db(request: Request):
         # Fallback for testing or if state is not set
         global db_client
         if db_client is None:
-            mongo_host = os.getenv("MONGO_HOST")
+            mongo_host = settings.MONGO_HOST
             db_client = AsyncMongoClient(mongo_host)
         yield db_client["lingua-tile"]
 

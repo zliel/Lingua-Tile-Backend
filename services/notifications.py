@@ -1,25 +1,27 @@
-import os
 import json
 import logging
 from datetime import datetime, timezone
 from pymongo import AsyncMongoClient
 from pywebpush import webpush, WebPushException
-from typing import Dict
+
+from app.config import get_settings
+
+settings = get_settings()
 
 
 async def check_overdue_reviews():
     """
     Background job to check for overdue reviews and send push notifications.
     """
-    mongo_host = os.getenv("MONGO_HOST")
+    mongo_host = settings.MONGO_HOST
     client = AsyncMongoClient(mongo_host)
     try:
         db = client["lingua-tile"]
         user_collection = db["users"]
         lesson_review_collection = db["lesson_reviews"]
 
-        vapid_private_key = os.getenv("VAPID_PRIVATE_KEY")
-        vapid_claims = {"sub": os.getenv("VAPID_MAILTO", "mailto:admin@example.com")}
+        vapid_private_key = settings.VAPID_PRIVATE_KEY
+        vapid_claims = settings.VAPID_CLAIMS_SUB
 
         if not vapid_private_key:
             logging.warning("VAPID_PRIVATE_KEY not set, skipping push notifications.")

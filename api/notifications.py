@@ -6,17 +6,19 @@ from fastapi import APIRouter, Request, Depends, status, HTTPException
 
 from api.dependencies import get_current_user, get_db
 from app.limiter import limiter
+from app.config import get_settings
 from models import User
 from models.users import PushSubscription
 
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
+settings = get_settings()
 
 
 @router.get("/vapid-public-key")
 @limiter.limit("10/minute")
 async def get_vapid_public_key(request: Request):
-    key = os.getenv("VAPID_PUBLIC_KEY")
+    key = settings.VAPID_PUBLIC_KEY
     return {"publicKey": key}
 
 
