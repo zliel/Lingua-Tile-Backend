@@ -1,15 +1,13 @@
-import os
-
 import requests
-from dotenv import load_dotenv
 from fastapi import APIRouter, Request
 
+from app.config import get_settings
 from app.limiter import limiter
 
-load_dotenv(".env")
 router = APIRouter(prefix="/api/translations", tags=["Translations"])
 host = "deep-translate1.p.rapidapi.com"
-api_key = os.getenv("API_KEY")
+settings = get_settings()
+api_key = settings.API_KEY
 headers = {
     "x-rapidapi-host": host,
     "x-rapidapi-key": api_key,

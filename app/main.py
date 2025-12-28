@@ -9,6 +9,10 @@ from pymongo import AsyncMongoClient
 
 # from services.notifications import check_overdue_reviews
 from contextlib import asynccontextmanager
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+import logging
 
 from api import dependencies
 from api.auth import router as auth_router
@@ -20,21 +24,10 @@ from api.users import router as users_router
 from api.notifications import router as notifications_router
 from app.limiter import limiter
 from app.cache_config import setup_cache
+from app.config import get_settings
 from app.logging_config import setup_logging
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 
-
-import logging
-import os
-
-from dotenv import load_dotenv
-
-load_dotenv(".env")
-
-title = "LinguaTile API"
-description = "An API used by LinguaTile to aid in studying Japanese"
+settings = get_settings()
 # scheduler = AsyncIOScheduler()
 
 
@@ -42,7 +35,7 @@ description = "An API used by LinguaTile to aid in studying Japanese"
 async def lifespan(app: FastAPI):
     setup_cache()
     setup_logging()
-    mongo_host = os.getenv("MONGO_HOST")
+    mongo_host = settings.MONGO_HOST
     if mongo_host:
         dependencies.db_client = AsyncMongoClient(mongo_host)
         # Store in app.state for cleaner access (even though dependencies.db_client is still used)
@@ -66,7 +59,12 @@ async def lifespan(app: FastAPI):
         logging.info("Closed MongoDB connection")
 
 
-app = FastAPI(title=title, description=description, version="0.8.0", lifespan=lifespan)
+app = FastAPI(
+    title=settings.TITLE,
+    description=settings.DESCRIPTION,
+    version=settings.VERSION,
+    lifespan=lifespan,
+)
 app.include_router(cards_router)
 app.include_router(lessons_router)
 app.include_router(translations_router)
