@@ -5,7 +5,6 @@ from app.main import app
 from app.config import get_settings
 from api import dependencies
 from pymongo import AsyncMongoClient
-import os
 
 
 @pytest_asyncio.fixture

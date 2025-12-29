@@ -4,7 +4,6 @@ from models.users import User
 from models.lessons import Lesson
 from models.cards import Card
 from models.lesson_review import LessonReview
-from bson import ObjectId
 
 
 class UserFactory(ModelFactory[User]):
