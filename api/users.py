@@ -30,6 +30,7 @@ async def create_user(request: Request, user: User, db=Depends(get_db)):
 
     user.hash_password()
     await user_collection.insert_one(user.model_dump(by_alias=True, exclude={"id"}))
+    del user.password
 
     return user
 

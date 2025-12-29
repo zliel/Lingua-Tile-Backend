@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     VAPID_PUBLIC_KEY: str | None = None
     VAPID_CLAIMS_SUB: str = "mailto:admin@lingua-tile.com"
 
+    # Testing Environment
+    TESTING: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
