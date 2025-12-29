@@ -58,3 +58,5 @@ async def override_dependency(db_client):
         await db_client["lingua-tile-test"].lessons.delete_many({})
         await db_client["lingua-tile-test"].cards.delete_many({})
         await db_client["lingua-tile-test"].lesson_reviews.delete_many({})
+        await db_client["lingua-tile-test"].review_logs.delete_many({})
+        await db_client["lingua-tile-test"].sections.delete_many({})
