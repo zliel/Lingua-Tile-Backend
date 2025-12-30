@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from bson import ObjectId
 from pydantic import BaseModel, Field
@@ -16,7 +16,9 @@ class ReviewLog(BaseModel):
         arbitrary_types_allowed = True
         json_encoders = {
             ObjectId: lambda oid: str(oid),
-            datetime: lambda dt: dt.isoformat(),
+            datetime: lambda dt: dt.replace(tzinfo=timezone.utc).isoformat()
+            if dt.tzinfo is None
+            else dt.isoformat(),
         }
         json_schema_extra = {
             "example": {
