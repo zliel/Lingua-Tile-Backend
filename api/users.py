@@ -176,3 +176,25 @@ async def delete_user(
 
     # if user is None:
     #     raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+
+
+@router.post("/reset-progress", status_code=status.HTTP_200_OK)
+@limiter.limit("3/hour")
+async def reset_user_progress(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """Reset the current user's progress (reviews and XP)"""
+    user_collection = db["users"]
+    lesson_review_collection = db["lesson_reviews"]
+    review_logs_collection = db["review_logs"]
+
+    await lesson_review_collection.delete_many({"user_id": str(current_user.id)})
+    await review_logs_collection.delete_many({"user_id": str(current_user.id)})
+
+    await user_collection.update_one(
+        {"_id": ObjectId(current_user.id)}, {"$set": {"xp": 0}}
+    )
+
+    return {"message": "Progress reset successfully"}
