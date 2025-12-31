@@ -194,7 +194,7 @@ async def reset_user_progress(
     await review_logs_collection.delete_many({"user_id": str(current_user.id)})
 
     await user_collection.update_one(
-        {"_id": ObjectId(current_user.id)}, {"$set": {"xp": 0}}
+        {"_id": ObjectId(current_user.id)}, {"$set": {"xp": 0, "completed_lessons": []}}
     )
 
     return {"message": "Progress reset successfully"}
