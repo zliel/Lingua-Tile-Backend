@@ -27,6 +27,7 @@ from app.cache_config import setup_cache
 from app.config import get_settings
 from app.logging_config import setup_logging
 from app.exception_handlers import add_exception_handlers
+from app.middleware.correlation import CorrelationIdMiddleware
 
 settings = get_settings()
 # scheduler = AsyncIOScheduler()
@@ -95,3 +96,4 @@ add_exception_handlers(app)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(CorrelationIdMiddleware)
