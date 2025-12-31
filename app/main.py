@@ -26,6 +26,8 @@ from app.limiter import limiter
 from app.cache_config import setup_cache
 from app.config import get_settings
 from app.logging_config import setup_logging
+from app.exception_handlers import add_exception_handlers
+from app.middleware.correlation import CorrelationIdMiddleware
 
 settings = get_settings()
 # scheduler = AsyncIOScheduler()
@@ -89,16 +91,9 @@ async def root(request: Request):
     return {"message": "Hello World!"}
 
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
-    logging.error(f"{request}: {exc_str}")
-    content = {"status_code": 422, "message": exc_str, "data": None}
-    return JSONResponse(
-        content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
-    )
-
+add_exception_handlers(app)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(CorrelationIdMiddleware)
