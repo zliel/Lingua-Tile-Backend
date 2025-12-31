@@ -1,7 +1,10 @@
+from datetime import datetime
+from httpx import AsyncClient
 import pytest
 from tests.factories import UserFactory
-from api.dependencies import pwd_context
 from bson import ObjectId
+
+from api.dependencies import pwd_context
 
 
 @pytest.mark.asyncio
@@ -110,3 +113,54 @@ async def test_user_cannot_view_other_user(client, db):
 
     # Verify fail
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_reset_user_progress(client: AsyncClient, db):
+    hashed = pwd_context.hash("testpass")
+    user = UserFactory.build(password=hashed, xp=100)
+    user_id = str(ObjectId())
+    user_data = user.model_dump(by_alias=True, exclude={"id"})
+    user_data["_id"] = ObjectId(user_id)
+    await db["users"].insert_one(user_data)
+
+    login_res = await client.post(
+        "/api/auth/login", json={"username": user.username, "password": "testpass"}
+    )
+    token = login_res.json()["token"]
+
+    # Add a lesson review
+    lesson_review_collection = db["lesson_reviews"]
+    await lesson_review_collection.insert_one(
+        {
+            "user_id": user_id,
+            "lesson_id": user_id,
+            "completed_at": datetime.now(),
+        }
+    )
+
+    # Add a review log
+    review_collection = db["review_logs"]
+    await review_collection.insert_one(
+        {
+            "user_id": user_id,
+            "lesson_id": user_id,
+            "review_date": datetime.now(),
+            "rating": 5,
+        }
+    )
+
+    user_before = await db["users"].find_one({"_id": ObjectId(user_id)})
+    assert user_before["xp"] == 100
+    count_before = await review_collection.count_documents({"user_id": user_id})
+    assert count_before > 0
+
+    response = await client.post(
+        "/api/users/reset-progress", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+
+    user_after = await db["users"].find_one({"_id": ObjectId(user_id)})
+    assert user_after["xp"] == 0
+    count_after = await review_collection.count_documents({"user_id": user_id})
+    assert count_after == 0
