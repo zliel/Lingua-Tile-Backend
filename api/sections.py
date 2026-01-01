@@ -33,7 +33,7 @@ async def create_section(request: Request, section: Section, db=Depends(get_db))
 
     # Invalidate cache
     cache = caches.get("default")
-    await cache.delete("all_sections", namespace="sections")
+    await cache.delete(key="all_sections")
 
     if new_section["lesson_ids"]:
         lesson_object_ids = [
@@ -66,7 +66,11 @@ async def create_section(request: Request, section: Section, db=Depends(get_db))
 
 @router.get("/all")
 @limiter.limit("10/minute")
-@cached(ttl=3600, key="all_sections", namespace="sections")
+@cached(
+    ttl=3600,
+    key="all_sections",
+    alias="default",
+)
 async def get_all_sections(request: Request, db=Depends(get_db)):
     section_collection = db.get_collection("sections")
     sections = await section_collection.find().sort("order_index", 1).to_list()
@@ -79,7 +83,7 @@ async def get_all_sections(request: Request, db=Depends(get_db)):
 @cached(
     ttl=600,
     key_builder=lambda f, *args, **kwargs: f"download_{kwargs['section_id']}",
-    namespace="sections",
+    alias="default",
 )
 async def download_section(
     request: Request, section_id: PyObjectId, db=Depends(get_db)
@@ -148,8 +152,8 @@ async def update_section(
 
     # Invalidate cache
     cache = caches.get("default")
-    await cache.delete("all_sections", namespace="sections")
-    await cache.delete(f"download_{section_id}", namespace="sections")
+    await cache.delete(key="all_sections")
+    await cache.delete(key=f"download_{section_id}")
 
     updated_section = await section_collection.find_one({"_id": ObjectId(section_id)})
 
@@ -211,5 +215,5 @@ async def delete_section(
 
     # Invalidate cache
     cache = caches.get("default")
-    await cache.delete("all_sections", namespace="sections")
-    await cache.delete(f"download_{section_id}", namespace="sections")
+    await cache.delete(key="all_sections")
+    await cache.delete(key=f"download_{section_id}")

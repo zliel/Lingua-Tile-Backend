@@ -1,4 +1,4 @@
-from aiocache import cached, caches
+from aiocache import cached, caches, SimpleMemoryCache
 import random
 import re
 from typing import List, Optional
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
 
 @router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-@cached(ttl=600, key="all_lessons", namespace="lessons")
+@cached(ttl=600, key="all_lessons", alias="default")
 async def get_all_lessons(request: Request, db=Depends(get_db)):
     """Retrieve all lessons from the database"""
     lessons = await db["lessons"].find().sort("order_index", 1).to_list()
@@ -63,9 +63,9 @@ async def create_lesson(request: Request, lesson: Lesson, db=Depends(get_db)):
     new_lesson = await db["lessons"].find_one({"_id": ObjectId(result.inserted_id)})
 
     # Invalidate cache
-    cache = caches.get("default")
-    await cache.delete("all_lessons", namespace="lessons")
-    await cache.delete(f"category_{lesson.category.lower()}", namespace="lessons")
+    cache: SimpleMemoryCache = caches.get("default")
+    await cache.delete(key="all_lessons")
+    await cache.delete(key=f"category_{lesson.category.lower()}")
 
     # Update the cards that are in the lesson
     if new_lesson and new_lesson["card_ids"]:
@@ -96,7 +96,7 @@ async def get_total_lesson_count(request: Request, db=Depends(get_db)):
 @cached(
     ttl=600,
     key_builder=lambda f, *args, **kwargs: f"category_{kwargs['category'].lower()}",
-    namespace="lessons",
+    alias="default",
 )
 async def get_lessons_by_category(request: Request, category: str, db=Depends(get_db)):
     """Retrieve all lessons from the database by category"""
@@ -240,12 +240,10 @@ async def update_lesson(
         )
 
     # Invalidate cache
-    cache = caches.get("default")
-    await cache.delete("all_lessons", namespace="lessons")
+    cache: SimpleMemoryCache = caches.get("default")
+    await cache.delete(key="all_lessons")
     if old_lesson.get("category"):
-        await cache.delete(
-            f"category_{old_lesson['category'].lower()}", namespace="lessons"
-        )
+        await cache.delete(key=f"category_{old_lesson['category'].lower()}")
 
     # update a lesson in the database by id
     updated_lesson = await db["lessons"].find_one({"_id": ObjectId(lesson_id)})
@@ -258,9 +256,7 @@ async def update_lesson(
     if updated_lesson.get("category") and updated_lesson.get(
         "category"
     ) != old_lesson.get("category"):
-        await cache.delete(
-            f"category_{updated_lesson['category'].lower()}", namespace="lessons"
-        )
+        await cache.delete(key=f"category_{updated_lesson['category'].lower()}")
 
     # if cards were in the old lesson but not the new lesson, remove the lesson id from them
     if old_lesson["card_ids"]:
@@ -318,12 +314,10 @@ async def delete_lesson(request: Request, lesson_id: PyObjectId, db=Depends(get_
     await db["lessons"].delete_one({"_id": ObjectId(lesson_id)})
 
     # Invalidate cache
-    cache = caches.get("default")
-    await cache.delete("all_lessons", namespace="lessons")
+    cache: SimpleMemoryCache = caches.get("default")
+    await cache.delete(key="all_lessons")
     if lesson and lesson.get("category"):
-        await cache.delete(
-            f"category_{lesson['category'].lower()}", namespace="lessons"
-        )
+        await cache.delete(key=f"category_{lesson['category'].lower()}")
 
     # update all cards associated with the lesson to reflect the deletion of the lesson
     await db["cards"].update_many(
