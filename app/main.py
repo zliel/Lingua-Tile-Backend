@@ -5,14 +5,19 @@ from starlette.responses import JSONResponse
 
 # from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # from apscheduler.triggers.interval import IntervalTrigger
-from pymongo import AsyncMongoClient
-
 # from services.notifications import check_overdue_reviews
 from contextlib import asynccontextmanager
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import logging
+
+from pymongo import AsyncMongoClient
+
+from app.cache_config import setup_cache
+
+# Setup cache BEFORE importing API routes to ensure decorators bind to correct config
+setup_cache()
 
 from api import dependencies
 from api.auth import router as auth_router
@@ -25,18 +30,17 @@ from api.notifications import router as notifications_router
 from app.limiter import limiter
 from app.cache_config import setup_cache
 from app.config import get_settings
-from app.logging_config import setup_logging
 from app.exception_handlers import add_exception_handlers
 from app.middleware.correlation import CorrelationIdMiddleware
 
+# setup_cache()
 settings = get_settings()
 # scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    setup_cache()
-    setup_logging()
+    # setup_logging()
     mongo_host = settings.MONGO_HOST
     if mongo_host:
         dependencies.db_client = AsyncMongoClient(mongo_host)
