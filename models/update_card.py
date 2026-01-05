@@ -1,14 +1,12 @@
-from typing import Optional, List
-
 from pydantic import BaseModel
 
 from .py_object_id import PyObjectId
 
 
 class UpdateCard(BaseModel):
-    front_text: Optional[str] = None
-    back_text: Optional[str] = None
-    lesson_ids: Optional[List[PyObjectId]] = None
+    front_text: str | None = None
+    back_text: str | None = None
+    lesson_ids: list[PyObjectId] | None = None
 
     class Config:
         arbitrary_types_allowed = True

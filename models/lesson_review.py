@@ -1,5 +1,4 @@
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 from fsrs import Card, Rating, Scheduler
@@ -12,7 +11,7 @@ fsrs_scheduler = Scheduler()
 
 
 class LessonReview(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: PyObjectId | None = Field(alias="_id", default=None)
     lesson_id: PyObjectId = Field(...)
     user_id: PyObjectId = Field(...)
 

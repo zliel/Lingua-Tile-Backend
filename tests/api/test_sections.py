@@ -1,7 +1,8 @@
 import pytest
-from tests.factories import SectionFactory, UserFactory, LessonFactory, CardFactory
 from bson import ObjectId
+
 from api.dependencies import pwd_context
+from tests.factories import CardFactory, LessonFactory, SectionFactory, UserFactory
 
 
 @pytest.mark.asyncio

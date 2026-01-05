@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from bson.objectid import ObjectId
 from pydantic import BaseModel, Field
 
@@ -7,9 +5,9 @@ from .py_object_id import PyObjectId
 
 
 class Section(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: PyObjectId | None = Field(alias="_id", default=None)
     name: str = Field(...)
-    lesson_ids: List[PyObjectId] = Field(default_factory=list)
+    lesson_ids: list[PyObjectId] = Field(default_factory=list)
     order_index: int = Field(default=0)
 
     class Config:

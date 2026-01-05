@@ -1,5 +1,3 @@
-from typing import Optional, List
-
 from pydantic import BaseModel, field_validator
 
 from .py_object_id import PyObjectId
@@ -7,13 +5,13 @@ from .py_object_id import PyObjectId
 
 # define a pydantic model to update a lesson
 class UpdateLesson(BaseModel):
-    title: Optional[str] = None
-    section_id: Optional[PyObjectId] = None
-    order_index: Optional[int] = None
-    category: Optional[str] = None
-    content: Optional[str] = None
-    sentences: Optional[List[dict]] = None
-    card_ids: Optional[List[PyObjectId]] = None
+    title: str | None = None
+    section_id: PyObjectId | None = None
+    order_index: int | None = None
+    category: str | None = None
+    content: str | None = None
+    sentences: list[dict] | None = None
+    card_ids: list[PyObjectId] | None = None
 
     @field_validator("section_id")
     def validate_section_id(cls, v):

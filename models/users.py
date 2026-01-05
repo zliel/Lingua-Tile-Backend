@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from bson.objectid import ObjectId
 from passlib.context import CryptContext
@@ -13,8 +12,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class PushSubscription(BaseModel):
     endpoint: str
     keys: dict
-    expirationTime: Optional[float] = None
-    user_id: Optional[PyObjectId] = Field(alias="user_id", default=None)
+    expirationTime: float | None = None
+    user_id: PyObjectId | None = Field(alias="user_id", default=None)
 
     class Config:
         arbitrary_types_allowed = True
@@ -26,14 +25,14 @@ class PushUnsubscribe(BaseModel):
 
 
 class User(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: PyObjectId | None = Field(alias="_id", default=None)
     username: str = Field(...)
     password: str = Field(...)
-    roles: List[str] = Field(default=["user"])
-    completed_lessons: List[PyObjectId] = Field(default=[])
-    push_subscriptions: List[PushSubscription] = Field(default=[])
+    roles: list[str] = Field(default=["user"])
+    completed_lessons: list[PyObjectId] = Field(default=[])
+    push_subscriptions: list[PushSubscription] = Field(default=[])
     current_streak: int = Field(default=0)
-    last_activity_date: Optional[datetime] = Field(default=None)
+    last_activity_date: datetime | None = Field(default=None)
     timezone: str = Field(default="UTC")
     level: int = Field(default=1)
     xp: int = Field(default=0)

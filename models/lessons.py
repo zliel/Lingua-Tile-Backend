@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from bson.objectid import ObjectId
 from pydantic import BaseModel, Field, field_validator
 
@@ -8,13 +6,13 @@ from .sentences import Sentence
 
 
 class Lesson(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: PyObjectId | None = Field(alias="_id", default=None)
     title: str = Field(...)
-    section_id: Optional[PyObjectId] = Field(default=None)
+    section_id: PyObjectId | None = Field(default=None)
     order_index: int = Field(default=0)
-    card_ids: Optional[List[PyObjectId]] = Field(default=[])
-    content: Optional[str] = Field(default="")  # This will be markdown content
-    sentences: Optional[List[Sentence]] = Field(default=[])
+    card_ids: list[PyObjectId] | None = Field(default=[])
+    content: str | None = Field(default="")  # This will be markdown content
+    sentences: list[Sentence] | None = Field(default=[])
     category: str = Field(...)
 
     @field_validator("section_id")

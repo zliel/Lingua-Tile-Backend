@@ -1,6 +1,5 @@
 import jose
 import jwt
-from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
@@ -9,7 +8,7 @@ from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.config import get_settings
-from models import User
+from models.users import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
@@ -70,12 +69,12 @@ async def get_current_user(
     except jose.exceptions.ExpiredSignatureError:
         raise HTTPException(
             status_code=401, detail="Invalid authentication credentials"
-        )
+        ) from None
 
     except jose.exceptions.JWTError:
         raise HTTPException(
             status_code=401, detail="Invalid authentication credentials"
-        )
+        ) from None
 
 
 async def get_current_user_optional(

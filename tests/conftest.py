@@ -1,10 +1,11 @@
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from app.main import app
-from app.config import get_settings
-from api import dependencies
+from httpx import ASGITransport, AsyncClient
 from pymongo import AsyncMongoClient
+
+from api import dependencies
+from app.config import get_settings
+from app.main import app
 
 
 @pytest_asyncio.fixture

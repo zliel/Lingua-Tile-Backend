@@ -1,18 +1,20 @@
-from typing import List
 from bson import ObjectId
-from fastapi import APIRouter, Request, status, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.results import InsertOneResult
 
-from api.dependencies import RoleChecker, get_db, get_current_user
+from api.dependencies import RoleChecker, get_current_user, get_db
 from api.users import is_admin
 from app.limiter import limiter
-from models import Card, UpdateCard, PyObjectId, User
+from models.cards import Card
+from models.py_object_id import PyObjectId
+from models.update_card import UpdateCard
+from models.users import User
 
 router = APIRouter(prefix="/api/cards", tags=["Cards"])
 
 
-@router.get("/all", response_model=List[Card])
+@router.get("/all", response_model=list[Card])
 @limiter.limit("5/minute")
 async def get_all_cards(
     request: Request, current_user: User = Depends(get_current_user), db=Depends(get_db)
@@ -75,7 +77,7 @@ async def get_card(request: Request, card_id: PyObjectId, db=Depends(get_db)):
     return card
 
 
-@router.get("/lesson/{lesson_id}", response_model=List[Card])
+@router.get("/lesson/{lesson_id}", response_model=list[Card])
 @limiter.limit("10/minute")
 async def get_cards_by_lesson(
     request: Request, lesson_id: PyObjectId, db=Depends(get_db)
@@ -180,10 +182,10 @@ async def delete_card(
     await lesson_collection.update_many({}, {"$pull": {"card_ids": card_id}})
 
 
-@router.post("/by-ids", response_model=List[Card])
+@router.post("/by-ids", response_model=list[Card])
 @limiter.limit("10/minute")
 async def get_cards_by_ids(
-    request: Request, card_ids: List[PyObjectId], db=Depends(get_db)
+    request: Request, card_ids: list[PyObjectId], db=Depends(get_db)
 ):
     """Retrieve cards by a list of IDs, preserving the order of the input list"""
     card_collection = db["cards"]

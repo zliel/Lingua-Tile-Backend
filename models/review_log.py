@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
-from typing import Optional
+
 from bson import ObjectId
 from pydantic import BaseModel, Field
+
 from .py_object_id import PyObjectId
 
 
 class ReviewLog(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: PyObjectId | None = Field(alias="_id", default=None)
     lesson_id: PyObjectId = Field(...)
     user_id: PyObjectId = Field(...)
     review_date: datetime = Field(...)
