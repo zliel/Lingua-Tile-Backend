@@ -1,4 +1,4 @@
-from utils.xp import calculate_xp_for_next_level, add_xp_to_user
+from utils.xp import add_xp_to_user, calculate_xp_for_next_level
 
 
 def test_xp_thresholds():

@@ -1,9 +1,8 @@
-from typing import List, Optional
+import unicodedata
 
 import jaconv
-import unicodedata
-from MeCab import Tagger
 from bson import ObjectId
+from MeCab import Tagger
 from pydantic import BaseModel, Field
 
 from .py_object_id import PyObjectId
@@ -12,7 +11,7 @@ tagger = Tagger("")
 
 
 # Helper function to split a sentence into words using MeCab
-def split_sentence(sentence: str) -> List[str]:
+def split_sentence(sentence: str) -> list[str]:
     words = []
     nodes = tagger.parseToNode(sentence)
 
@@ -55,10 +54,10 @@ def split_sentence(sentence: str) -> List[str]:
 
 
 class Sentence(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=str(ObjectId()))
+    id: PyObjectId | None = Field(alias="_id", default=str(ObjectId()))
     full_sentence: str = Field(...)
-    possible_answers: List[str] = Field(...)
-    words: List[str] = Field(default=[])
+    possible_answers: list[str] = Field(...)
+    words: list[str] = Field(default=[])
 
     @classmethod
     def create(cls, full_sentence: str, possible_answers=None, words=None):

@@ -1,10 +1,11 @@
 from datetime import datetime
-from httpx import AsyncClient
+
 import pytest
-from tests.factories import UserFactory
 from bson import ObjectId
+from httpx import AsyncClient
 
 from api.dependencies import pwd_context
+from tests.factories import UserFactory
 
 
 @pytest.mark.asyncio

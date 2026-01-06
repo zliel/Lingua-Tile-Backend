@@ -1,11 +1,14 @@
-from bson import ObjectId
-from fastapi import APIRouter, Request, status, HTTPException, Depends
-from pymongo.asynchronous.collection import AsyncCollection
 from aiocache import cached, caches
+from bson import ObjectId
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pymongo.asynchronous.collection import AsyncCollection
 
-from api.dependencies import get_db, RoleChecker
+from api.dependencies import RoleChecker, get_db
 from app.limiter import limiter
-from models import Section, PyObjectId, Lesson, Card
+from models.cards import Card
+from models.lessons import Lesson
+from models.py_object_id import PyObjectId
+from models.sections import Section
 from models.update_section import UpdateSection
 
 router = APIRouter(prefix="/api/sections", tags=["Sections"])

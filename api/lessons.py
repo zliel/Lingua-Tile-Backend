@@ -1,25 +1,26 @@
-from aiocache import cached, caches, SimpleMemoryCache
 import random
 import re
-from typing import List, Optional
 from datetime import datetime, timezone
+
+from aiocache import SimpleMemoryCache, cached, caches
 from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import Depends, APIRouter, status, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from api.dependencies import (
-    get_current_user,
-    get_db,
-    get_current_user_optional,
     RoleChecker,
+    get_current_user,
+    get_current_user_optional,
+    get_db,
 )
 from app.limiter import limiter
-from models import PyObjectId, User
 from models.lesson_review import LessonReview
 from models.lessons import Lesson
+from models.py_object_id import PyObjectId
+from models.review_log import ReviewLog
 from models.sentences import Sentence
 from models.update_lesson import UpdateLesson
-from models.review_log import ReviewLog
+from models.users import User
 from utils.streaks import update_user_streak
 from utils.xp import add_xp_to_user
 
@@ -27,13 +28,14 @@ load_dotenv(".env")
 router = APIRouter(prefix="/api/lessons", tags=["Lessons"])
 
 
-@router.get("/all", response_model=List[Lesson], status_code=status.HTTP_200_OK)
+@router.get("/all", response_model=list[Lesson], status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 @cached(ttl=600, key="all_lessons", alias="default")
 async def get_all_lessons(request: Request, db=Depends(get_db)):
     """Retrieve all lessons from the database"""
     lessons = await db["lessons"].find().sort("order_index", 1).to_list()
-    return [Lesson(**lesson) for lesson in lessons]
+    # return [Lesson(**lesson) for lesson in lessons]
+    return lessons
 
 
 @router.post(
@@ -159,7 +161,7 @@ async def get_lesson_reviews(
 async def get_lesson(
     request: Request,
     lesson_id: PyObjectId,
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User | None = Depends(get_current_user_optional),
     db=Depends(get_db),
 ):
     """Retrieve a lesson from the database by id"""

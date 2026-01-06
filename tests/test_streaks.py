@@ -1,7 +1,9 @@
-import pytest
 from datetime import datetime, timedelta, timezone
-from utils.streaks import update_user_streak
+
+import pytest
+
 from tests.factories import UserFactory
+from utils.streaks import update_user_streak
 
 
 @pytest.fixture

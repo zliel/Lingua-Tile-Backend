@@ -1,8 +1,7 @@
-from contextvars import ContextVar
-from typing import Optional
 import uuid
+from contextvars import ContextVar
 
-request_id_ctx: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
+request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 def get_request_id() -> str:

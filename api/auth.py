@@ -1,18 +1,18 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import APIRouter, status, HTTPException, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from api.dependencies import (
-    get_current_user,
-    SECRET_KEY,
     ALGORITHM,
-    pwd_context,
+    SECRET_KEY,
+    get_current_user,
     get_db,
+    pwd_context,
 )
 from api.users import is_admin
 from app.limiter import limiter
-from models import User
+from models.users import User
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7

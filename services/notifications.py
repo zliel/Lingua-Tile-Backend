@@ -1,8 +1,9 @@
 import json
 import logging
 from datetime import datetime, timezone
+
 from pymongo import AsyncMongoClient
-from pywebpush import webpush, WebPushException
+from pywebpush import WebPushException, webpush
 
 from app.config import get_settings
 

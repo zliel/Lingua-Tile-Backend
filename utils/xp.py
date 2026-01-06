@@ -1,6 +1,3 @@
-from typing import Tuple
-
-
 def calculate_xp_for_next_level(level: int) -> int:
     """
     Calculates the total XP required to reach the NEXT level.
@@ -15,7 +12,7 @@ def calculate_xp_for_next_level(level: int) -> int:
 
 def add_xp_to_user(
     current_xp: int, current_level: int, xp_to_add: int
-) -> Tuple[int, int, bool]:
+) -> tuple[int, int, bool]:
     """
     Adds XP to a user and handles leveling up.
     Returns: (new_xp, new_level, leveled_up)

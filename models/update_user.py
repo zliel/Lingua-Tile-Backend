@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from bson.objectid import ObjectId
 from passlib.context import CryptContext
 from pydantic import BaseModel
@@ -10,12 +8,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UpdateUser(BaseModel):
-    username: Optional[str] = None
-    password: Optional[str] = None
-    roles: Optional[List[str]] = None
-    completed_lessons: Optional[List[PyObjectId]] = None
-    timezone: Optional[str] = None
-    learning_mode: Optional[str] = None
+    username: str | None = None
+    password: str | None = None
+    roles: list[str] | None = None
+    completed_lessons: list[PyObjectId] | None = None
+    timezone: str | None = None
+    learning_mode: str | None = None
 
     class Config:
         validate_by_name = True

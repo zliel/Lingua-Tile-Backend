@@ -1,15 +1,10 @@
-from models.users import PushUnsubscribe
-import os
-
 from bson import ObjectId
-from fastapi import APIRouter, Request, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from api.dependencies import get_current_user, get_db
-from app.limiter import limiter
 from app.config import get_settings
-from models import User
-from models.users import PushSubscription
-
+from app.limiter import limiter
+from models.users import PushSubscription, PushUnsubscribe, User
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 settings = get_settings()

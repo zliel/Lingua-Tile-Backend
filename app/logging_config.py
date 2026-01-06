@@ -1,7 +1,7 @@
 import logging
 import sys
-from pythonjsonlogger.jsonlogger import JsonFormatter
 
+from pythonjsonlogger.jsonlogger import JsonFormatter
 
 from app.context import get_request_id
 

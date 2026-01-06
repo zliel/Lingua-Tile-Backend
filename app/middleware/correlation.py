@@ -1,7 +1,8 @@
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from app.context import set_request_id, generate_request_id
+
+from app.context import generate_request_id, set_request_id
 
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):

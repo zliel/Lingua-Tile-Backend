@@ -1,16 +1,19 @@
 from bson import ObjectId
-from fastapi import APIRouter, status, HTTPException, Depends, Request
-from typing import List, Dict
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pymongo.asynchronous.collection import AsyncCollection
 
 from api.dependencies import (
-    get_db,
-    get_current_user as get_client,
-    pwd_context,
     RoleChecker,
+    get_db,
+    pwd_context,
+)
+from api.dependencies import (
+    get_current_user as get_client,
 )
 from app.limiter import limiter
-from models import User, PyObjectId, UpdateUser
+from models.py_object_id import PyObjectId
+from models.update_user import UpdateUser
+from models.users import User
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
@@ -35,7 +38,7 @@ async def create_user(request: Request, user: User, db=Depends(get_db)):
     return user
 
 
-@router.get("/activity", response_model=List[Dict[str, str | int]])
+@router.get("/activity", response_model=list[dict[str, str | int]])
 @limiter.limit("10/minute")
 async def get_user_activity(
     request: Request,

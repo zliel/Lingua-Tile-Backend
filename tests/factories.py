@@ -1,9 +1,10 @@
-from models.sections import Section
 from polyfactory.factories.pydantic_factory import ModelFactory
-from models.users import User
-from models.lessons import Lesson
+
 from models.cards import Card
 from models.lesson_review import LessonReview
+from models.lessons import Lesson
+from models.sections import Section
+from models.users import User
 
 
 class UserFactory(ModelFactory[User]):

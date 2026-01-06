@@ -1,14 +1,12 @@
-from typing import Optional, List
-
 from pydantic import BaseModel
 
 from .py_object_id import PyObjectId
 
 
 class UpdateSection(BaseModel):
-    name: Optional[str] = None
-    lesson_ids: Optional[List[PyObjectId]] = None
-    order_index: Optional[int] = None
+    name: str | None = None
+    lesson_ids: list[PyObjectId] | None = None
+    order_index: int | None = None
 
     class Config:
         arbitrary_types_allowed = True
