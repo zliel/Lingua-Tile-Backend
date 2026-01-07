@@ -27,7 +27,9 @@ class PushUnsubscribe(BaseModel):
 class User(BaseModel):
     id: PyObjectId | None = Field(alias="_id", default=None)
     username: str = Field(...)
-    password: str = Field(...)
+    email: str = Field(...)
+    password: str | None = Field(default=None)
+    auth_provider: str | None = Field(default=None)
     roles: list[str] = Field(default=["user"])
     completed_lessons: list[PyObjectId] = Field(default=[])
     push_subscriptions: list[PushSubscription] = Field(default=[])
@@ -58,4 +60,4 @@ class User(BaseModel):
         }
 
     def hash_password(self):
-        self.password = pwd_context.hash(self.password)
+        self.password = pwd_context.hash(self.password if self.password else "")
