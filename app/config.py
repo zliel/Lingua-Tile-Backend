@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     # External APIs
     API_KEY: str | None = None
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
 
     # VAPID / Push Notifications
     VAPID_PRIVATE_KEY: str | None = None
