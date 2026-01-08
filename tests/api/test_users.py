@@ -13,6 +13,7 @@ async def test_signup_user(client, db):
     new_user_data = {
         "username": "newuser",
         "password": "newpassword",
+        "email": "test@test.com",
         "roles": ["user"],
         "timezone": "UTC",
         "push_subscriptions": [],

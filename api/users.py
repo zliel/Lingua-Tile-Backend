@@ -31,6 +31,15 @@ async def create_user(request: Request, user: User, db=Depends(get_db)):
     if await user_collection.find_one({"username": user.username}):
         raise HTTPException(status_code=400, detail="Username already exists")
 
+    if not user.email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    if await user_collection.find_one({"email": user.email}):
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    if not user.password:
+        raise HTTPException(status_code=400, detail="Password is required")
+
     user.hash_password()
     await user_collection.insert_one(user.model_dump(by_alias=True, exclude={"id"}))
     del user.password
