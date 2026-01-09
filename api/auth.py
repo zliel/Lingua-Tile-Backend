@@ -140,7 +140,7 @@ async def auth_google(request: Request, db=Depends(get_db)):
     )
 
     is_admin = "admin" in user.get("roles", [])
-    target_url = f"http://localhost:5173/sso-callback?token={access_token}&username={user['username']}&isAdmin={is_admin}"
+    target_url = f"{settings.FRONTEND_URL}/sso-callback?token={access_token}&username={user['username']}&isAdmin={is_admin}"
     return RedirectResponse(target_url)
 
 
