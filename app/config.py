@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     TITLE: str = "LinguaTile API"
     DESCRIPTION: str = "An API used by LinguaTile to aid in studying Japanese"
     VERSION: str = "0.8.0"
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # Security
     SECRET_KEY: str
@@ -21,6 +22,11 @@ class Settings(BaseSettings):
     API_KEY: str | None = None
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None
+
+    # Resend
+    RESEND_API_KEY: str | None = None
+    MAIL_FROM: str | None = None
+    MAIL_FROM_NAME: str = "LinguaTile"
 
     # VAPID / Push Notifications
     VAPID_PRIVATE_KEY: str | None = None

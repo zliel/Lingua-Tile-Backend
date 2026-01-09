@@ -15,6 +15,7 @@ from api.dependencies import (
 from api.users import is_admin
 from app.config import get_settings
 from app.limiter import limiter
+from models.auth import ForgotPasswordRequest, ResetPasswordRequest
 from models.login import LoginModel
 from models.users import User
 
@@ -141,3 +142,96 @@ async def auth_google(request: Request, db=Depends(get_db)):
     is_admin = "admin" in user.get("roles", [])
     target_url = f"http://localhost:5173/sso-callback?token={access_token}&username={user['username']}&isAdmin={is_admin}"
     return RedirectResponse(target_url)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+@limiter.limit("3/minute")
+async def forgot_password(
+    request: Request, body: ForgotPasswordRequest, db=Depends(get_db)
+):
+    """
+    Initiate password reset process.
+    Note: For MVP, this logs the link to console instead of sending email.
+    """
+    user_collection = db["users"]
+    user = await user_collection.find_one({"email": body.email})
+
+    if not user:
+        return {
+            "message": "If an account with that email exists, a reset link has been sent."
+        }
+
+    from uuid import uuid4
+
+    token = uuid4().hex
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    await user_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"reset_token": token, "reset_token_expires": expires}},
+    )
+
+    # Send Reset Email (if configured)
+    if settings.RESEND_API_KEY:
+        import resend
+
+        resend.api_key = settings.RESEND_API_KEY
+
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
+        params = {
+            "from": f"{settings.MAIL_FROM_NAME} <{settings.MAIL_FROM}>",
+            "to": [body.email],
+            "subject": "Reset Your LinguaTile Password",
+            "html": f"<p>Click the link below to reset your password:</p><p><a href='{reset_link}'>{reset_link}</a></p>",
+        }
+
+        try:
+            resend.Emails.send(params)
+        except Exception as e:
+            print(f"Error sending email: {e}")
+            # Fallback to console in case of API error during testing
+            print(
+                f"\n[MOCK EMAIL (Fallback)] Password Reset Link for {body.email}: {reset_link}\n"
+            )
+
+    else:
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        # print(f"\n[MOCK EMAIL] Password Reset Link for {body.email}: {reset_link}\n")
+
+    return {"message": "If that email exists, a reset link has been sent."}
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+@limiter.limit("3/minute")
+async def reset_password(
+    request: Request, body: ResetPasswordRequest, db=Depends(get_db)
+):
+    """Reset password using a valid token"""
+    user_collection = db["users"]
+
+    # Find user with matching token and valid expiration
+    user = await user_collection.find_one(
+        {
+            "reset_token": body.token,
+            "reset_token_expires": {"$gt": datetime.now(timezone.utc)},
+        }
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired password reset token"
+        )
+
+    # Update password and clear token
+    new_password_hash = pwd_context.hash(body.new_password)
+
+    await user_collection.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"password": new_password_hash},
+            "$unset": {"reset_token": "", "reset_token_expires": ""},
+        },
+    )
+
+    return {"message": "Password reset successfully"}

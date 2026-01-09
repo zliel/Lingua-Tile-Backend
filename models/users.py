@@ -29,6 +29,8 @@ class User(BaseModel):
     username: str = Field(...)
     email: str = Field(...)
     password: str | None = Field(default=None)
+    reset_token: str | None = Field(default=None)
+    reset_token_expires: datetime | None = Field(default=None)
     auth_provider: str | None = Field(default=None)
     roles: list[str] = Field(default=["user"])
     completed_lessons: list[PyObjectId] = Field(default=[])
