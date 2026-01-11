@@ -1,7 +1,7 @@
 import pytest
 from bson import ObjectId
 
-from api.dependencies import pwd_context
+from app.security import pwd_context
 from tests.factories import CardFactory, LessonFactory, UserFactory
 
 

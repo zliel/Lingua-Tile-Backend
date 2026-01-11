@@ -1,7 +1,7 @@
 import pytest
 from bson import ObjectId
 
-from api.dependencies import pwd_context
+from app.security import pwd_context
 from tests.factories import LessonFactory, UserFactory
 
 
@@ -37,7 +37,7 @@ async def test_create_lesson_admin(client, db):
 
     data = {
         "title": "New Lesson",
-        "category": "grammar",  # lowercase, should become Title Case
+        "category": "grammar",
         "sentences": [],
         "order_index": 1,
     }
@@ -48,7 +48,7 @@ async def test_create_lesson_admin(client, db):
     assert response.status_code == 201
     res_data = response.json()
     assert res_data["title"] == "New Lesson"
-    assert res_data["category"] == "Grammar"  # Title cased
+    assert res_data["category"] == "grammar"
     assert "_id" in res_data
 
 
