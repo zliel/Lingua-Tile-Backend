@@ -2,17 +2,19 @@ import jose
 import jwt
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.config import get_settings
 from models.users import User
+from services.cards import CardService
+from services.lessons import LessonService
+from services.sections import SectionService
+from services.users import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 settings = get_settings()
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
@@ -37,6 +39,22 @@ async def get_db(request: Request):
             mongo_host = settings.MONGO_HOST
             db_client = AsyncMongoClient(mongo_host)
         yield db_client["lingua-tile"]
+
+
+def get_user_service(db=Depends(get_db)) -> UserService:
+    return UserService(db)
+
+
+def get_card_service(db=Depends(get_db)) -> CardService:
+    return CardService(db)
+
+
+def get_section_service(db=Depends(get_db)) -> SectionService:
+    return SectionService(db)
+
+
+def get_lesson_service(db=Depends(get_db)) -> LessonService:
+    return LessonService(db)
 
 
 async def get_current_user(
