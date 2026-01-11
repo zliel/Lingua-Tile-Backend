@@ -5,16 +5,11 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 
-from api.dependencies import (
-    ALGORITHM,
-    SECRET_KEY,
-    get_current_user,
-    get_db,
-    pwd_context,
-)
+from api.dependencies import ALGORITHM, SECRET_KEY, get_current_user, get_db
 from api.users import is_admin
 from app.config import get_settings
 from app.limiter import limiter
+from app.security import pwd_context
 from models.auth import ForgotPasswordRequest, ResetPasswordRequest
 from models.login import LoginModel
 from models.users import User
