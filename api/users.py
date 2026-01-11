@@ -1,11 +1,8 @@
-from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pymongo.asynchronous.collection import AsyncCollection
 
 from api.dependencies import (
     RoleChecker,
-    get_db,
-    pwd_context,
+    get_user_service,
 )
 from api.dependencies import (
     get_current_user as get_client,
@@ -14,6 +11,7 @@ from app.limiter import limiter
 from models.py_object_id import PyObjectId
 from models.update_user import UpdateUser
 from models.users import User
+from services.users import UserService
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
@@ -24,27 +22,11 @@ def is_admin(user: User):
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def create_user(request: Request, user: User, db=Depends(get_db)):
+async def create_user(
+    request: Request, user: User, user_service: UserService = Depends(get_user_service)
+):
     """Create a new user in the database"""
-    user_collection = db["users"]
-
-    if await user_collection.find_one({"username": user.username}):
-        raise HTTPException(status_code=400, detail="Username already exists")
-
-    if not user.email:
-        raise HTTPException(status_code=400, detail="Email is required")
-
-    if await user_collection.find_one({"email": user.email}):
-        raise HTTPException(status_code=400, detail="Email already exists")
-
-    if not user.password:
-        raise HTTPException(status_code=400, detail="Password is required")
-
-    user.hash_password()
-    await user_collection.insert_one(user.model_dump(by_alias=True, exclude={"id"}))
-    del user.password
-
-    return user
+    return await user_service.create_user(user)
 
 
 @router.get("/activity", response_model=list[dict[str, str | int]])
@@ -52,28 +34,10 @@ async def create_user(request: Request, user: User, db=Depends(get_db)):
 async def get_user_activity(
     request: Request,
     current_user: User = Depends(get_client),
-    db=Depends(get_db),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Retrieve user activity map (reviews per day)"""
-    pipeline = [
-        {"$match": {"user_id": current_user.id}},
-        {
-            "$group": {
-                "_id": {
-                    "$dateToString": {"format": "%Y-%m-%d", "date": "$review_date"}
-                },
-                "count": {"$sum": 1},
-            }
-        },
-        {"$sort": {"_id": 1}},
-    ]
-
-    review_collection: AsyncCollection = db["review_logs"]
-
-    agg_result = await review_collection.aggregate(pipeline)
-    activity_data = await agg_result.to_list(length=None)
-
-    return [{"date": item["_id"], "count": item["count"]} for item in activity_data]
+    return await user_service.get_user_activity(str(current_user.id))
 
 
 @router.get("/", response_model=User, response_model_exclude={"password"})
@@ -94,16 +58,13 @@ async def get_user(
     request: Request,
     user_id: PyObjectId,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Retrieve a user from the database by id"""
     if not is_admin(current_user) and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to view this user")
 
-    user_collection = db["users"]
-
-    user = await user_collection.find_one({"_id": ObjectId(user_id)})
-    return User(**user)
+    return await user_service.get_user_by_id(str(user_id))
 
 
 @router.get(
@@ -114,16 +75,15 @@ async def get_user(
 )
 @limiter.limit("10/minute")
 async def get_all_users(
-    request: Request, current_user: User = Depends(get_current_user), db=Depends(get_db)
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Retrieve all users from the database"""
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Not authorized to view all users")
 
-    user_collection = db["users"]
-    users = await user_collection.find().to_list(length=None)
-
-    return [User(**user) for user in users]
+    return await user_service.get_all_users()
 
 
 @router.put(
@@ -135,35 +95,15 @@ async def update_user(
     user_id: PyObjectId,
     updated_info: UpdateUser,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Update a user in the database by id"""
-    user_info_to_update = {
-        k: v for k, v in updated_info.model_dump().items() if v is not None
-    }
-
-    if "password" in user_info_to_update:
-        if user_info_to_update["password"].strip() != "":
-            user_info_to_update["password"] = pwd_context.hash(
-                user_info_to_update["password"]
-            )
-        else:
-            del user_info_to_update["password"]
-
     if not is_admin(current_user) and current_user.id != user_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to update this user"
         )
 
-    user_collection = db["users"]
-    old_user = await user_collection.find_one_and_update(
-        {"_id": ObjectId(user_id)}, {"$set": user_info_to_update}
-    )
-    if old_user is None:
-        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
-
-    updated_user = await user_collection.find_one({"_id": ObjectId(user_id)})
-    return User(**updated_user)
+    return await user_service.update_user(str(user_id), updated_info)
 
 
 @router.delete("/delete/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -172,7 +112,7 @@ async def delete_user(
     request: Request,
     user_id: PyObjectId,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Delete a user from the database by id"""
     if not is_admin(current_user) and current_user.id != user_id:
@@ -180,14 +120,7 @@ async def delete_user(
             status_code=403, detail="Not authorized to delete this user"
         )
 
-    user_collection = db["users"]
-    result = await user_collection.delete_one({"_id": ObjectId(user_id)})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
-    # user = user_collection.find_one_and_delete({"_id": user_id})
-
-    # if user is None:
-    #     raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+    await user_service.delete_user(str(user_id))
 
 
 @router.post("/reset-progress", status_code=status.HTTP_200_OK)
@@ -195,19 +128,11 @@ async def delete_user(
 async def reset_user_progress(
     request: Request,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Reset the current user's progress (reviews and XP)"""
-    user_collection = db["users"]
-    lesson_review_collection = db["lesson_reviews"]
-    review_logs_collection = db["review_logs"]
+    await user_service.reset_progress(str(current_user.id))
 
-    await lesson_review_collection.delete_many({"user_id": str(current_user.id)})
-    await review_logs_collection.delete_many({"user_id": str(current_user.id)})
-
-    await user_collection.update_one(
-        {"_id": ObjectId(current_user.id)},
-        {"$set": {"xp": 0, "completed_lessons": [], "level": 1}},
-    )
+    return {"message": "Progress reset successfully"}
 
     return {"message": "Progress reset successfully"}
