@@ -3,6 +3,7 @@
 ### Brief Description
 <!-- Describe the purpose of this pull request -->
 In this pull request, I...
+
 ### Changes
 <!-- Describe the changes made in this pull request -->
 - A
@@ -14,6 +15,3 @@ In this pull request, I...
 - A
 - B
 - C
-
-### Screenshots (if applicable)
-<!-- Add screenshots to help showcase your changes -->
