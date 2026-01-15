@@ -1,21 +1,15 @@
 name: Deploy to Google Cloud Run
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'README.md'
-      - '.github/**'
-      - '.gitignore'
+  release:
+    types: [published]
 
 jobs:
   # Set up python environment and build the Docker image
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.11 ]
+        python-version: [3.11]
 
     steps:
       - uses: actions/checkout@v4
