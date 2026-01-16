@@ -133,7 +133,7 @@ async def delete_lesson(
 
 # Lesson Review Routes
 @router.post("/review", status_code=status.HTTP_200_OK)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def review_lesson(
     request: Request,
     current_user: User = Depends(get_current_user),
