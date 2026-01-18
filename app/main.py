@@ -22,6 +22,7 @@ setup_cache()
 from api import dependencies
 from api.auth import router as auth_router
 from api.cards import router as cards_router
+from api.health import router as health_router
 from api.lessons import router as lessons_router
 from api.notifications import router as notifications_router
 from api.sections import router as section_router
@@ -73,6 +74,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(cards_router)
+app.include_router(health_router)
 app.include_router(lessons_router)
 app.include_router(translations_router)
 app.include_router(auth_router)
