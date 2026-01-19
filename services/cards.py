@@ -130,3 +130,37 @@ class CardService(BaseService):
                 ordered_cards.append(Card(**cards_map[card_id]))
 
         return ordered_cards
+
+    async def create_cards_bulk(self, cards: list[Card]) -> list[Card]:
+        """Create multiple cards in a single batch operation."""
+        if not cards:
+            return []
+
+        # Prepare documents for insertion
+        card_docs = [card.model_dump(by_alias=True, exclude={"id"}) for card in cards]
+
+        # Bulk insert all cards
+        result = await self.collection.insert_many(card_docs)
+
+        # Fetch all newly created cards
+        new_cards = await self.collection.find(
+            {"_id": {"$in": result.inserted_ids}}
+        ).to_list(length=len(result.inserted_ids))
+
+        # Collect all lesson_id -> card_id mappings for batch update
+        lesson_to_cards: dict[str, list[str]] = {}
+        for card in new_cards:
+            card_id = str(card["_id"])
+            for lesson_id in card.get("lesson_ids", []):
+                if lesson_id not in lesson_to_cards:
+                    lesson_to_cards[lesson_id] = []
+                lesson_to_cards[lesson_id].append(card_id)
+
+        # Batch update lessons with new card associations
+        for lesson_id, card_ids in lesson_to_cards.items():
+            await self.lesson_collection.update_one(
+                {"_id": ObjectId(lesson_id)},
+                {"$addToSet": {"card_ids": {"$each": card_ids}}},
+            )
+
+        return [Card(**card) for card in new_cards]

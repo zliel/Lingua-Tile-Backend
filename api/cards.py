@@ -47,6 +47,26 @@ async def create_card(
     return await card_service.create_card(card)
 
 
+@router.post(
+    "/create-bulk",
+    response_model=list[Card],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
+@limiter.limit("5/minute")
+async def create_cards_bulk(
+    request: Request,
+    cards: list[Card],
+    current_user: User = Depends(get_current_user),
+    card_service: CardService = Depends(get_card_service),
+):
+    """Create multiple cards in a single request"""
+    if not is_admin(current_user):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    return await card_service.create_cards_bulk(cards)
+
+
 @router.get("/{card_id}", response_model=Card)
 @limiter.limit("10/minute")
 async def get_card(
