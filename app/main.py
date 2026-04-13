@@ -7,8 +7,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pymongo import AsyncMongoClient
 from prometheus_fastapi_instrumentator import Instrumentator
+from pymongo import AsyncMongoClient
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -76,7 +76,9 @@ app = FastAPI(
 )
 
 if settings.PROMETHEUS_ENABLED:
-    Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+    Instrumentator().instrument(app).expose(
+        app, endpoint="/metrics", include_in_schema=False
+    )
 
 app.include_router(cards_router)
 app.include_router(health_router)
