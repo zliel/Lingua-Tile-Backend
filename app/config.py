@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     VAPID_PUBLIC_KEY: str | None = None
     VAPID_CLAIMS_SUB: str = "mailto:admin@lingua-tile.com"
 
+    # Metrics
+    PROMETHEUS_ENABLED: bool = True
+
     # Testing Environment
     TESTING: bool = False
 
