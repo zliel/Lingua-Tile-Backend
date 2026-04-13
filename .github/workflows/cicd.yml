@@ -62,6 +62,7 @@ jobs:
           region: us-central1
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           flags: --platform=managed --allow-unauthenticated
+          env_vars: PROMETHEUS_ENABLED=true
 
       - name: Test the deployed service
         run: |
